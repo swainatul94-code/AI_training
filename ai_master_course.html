@@ -183,14 +183,145 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 /* ============================== COURSE DATA ============================== */
 const COURSE = [
 { id:0, title:"Phase 0 — Setup", est:"~5 hrs",
-  intro:"Bad env kills learning. By end: Python, Claude API key, GitHub repo, working <code>test_claude.py</code>.",
+  intro:"Bad env kills learning. By end: Python, Claude API key, GitHub repo, working <code>test_claude.py</code>. Don't skip the explanations — they teach concepts you'll be quizzed on.",
   lessons:[
-    {h:"Install Python (Windows)", body:"<p>From python.org. Check 'Add to PATH'. Verify:</p>", code:`python --version`},
-    {h:"Install uv (fast pkg manager)", body:"<p>Replaces pip+venv.</p>", code:`pip install uv\nuv --version`},
-    {h:"Get Anthropic API key", body:`<p>Sign up at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, add $5 credit, create key. Persist:</p>`, code:`setx ANTHROPIC_API_KEY "sk-ant-..."\n# CLOSE + REOPEN PowerShell\necho $env:ANTHROPIC_API_KEY`},
-    {h:"First Claude call", body:"<p>Save as <code>test_claude.py</code>:</p>", code:`import anthropic\nclient = anthropic.Anthropic()\nmsg = client.messages.create(\n    model="claude-opus-4-7",\n    max_tokens=100,\n    messages=[{"role":"user","content":"In 5 words: what is an LLM?"}],\n)\nprint(msg.content[0].text)`},
-    {h:"Run it", body:"", code:`uv pip install anthropic\npython test_claude.py`},
-    {h:"GitHub repo", body:"<p>Create empty repo named <code>AI_training</code> on github.com, then:</p>", code:`mkdir AI_training; cd AI_training\ngit init; git branch -M main\necho "# AI Training" > README.md\ngit add .; git commit -m "init"\ngit remote add origin https://github.com/USER/AI_training.git\ngit push -u origin main`},
+    {h:"What you're installing and why (read first)", body:`<p>Five tools. Each has a job:</p>
+    <table>
+      <tr><th>Tool</th><th>What it does</th><th>Why you need it</th></tr>
+      <tr><td><b>Python</b></td><td>Programming language interpreter</td><td>Every ML library is Python. Without it, no ML.</td></tr>
+      <tr><td><b>uv</b></td><td>Package manager (downloads libraries)</td><td>Faster + cleaner than pip. Installs things like <code>anthropic</code>, <code>numpy</code>.</td></tr>
+      <tr><td><b>Git</b></td><td>Version control — tracks every change to your code</td><td>Industry standard. Lets you push code to GitHub for backup + portfolio.</td></tr>
+      <tr><td><b>VS Code</b></td><td>Text editor for code</td><td>Where you write Python files. Free, popular.</td></tr>
+      <tr><td><b>Anthropic API key</b></td><td>Password that lets your code call Claude</td><td>Required to use Claude's API. Costs pennies per request.</td></tr>
+    </table>
+    <p><b>Mental model:</b> Python is the engine. uv buys parts (libraries). Git photographs your work. VS Code is the workbench. The API key opens the door to Claude.</p>`},
+    {h:"Install Python (Windows)", body:`<p><b>What is Python?</b> A programming language. You write <code>.py</code> files and Python runs them. It comes with a command called <code>python</code> that you call from PowerShell.</p>
+    <p><b>Steps:</b></p>
+    <ol>
+      <li>Go to <a href="https://python.org/downloads" target="_blank">python.org/downloads</a></li>
+      <li>Download installer (latest 3.11 or newer)</li>
+      <li>Run installer. <b>CRITICAL: check the box "Add Python to PATH"</b> at bottom of first screen. Without this, PowerShell won't find Python.</li>
+      <li>Click "Install Now"</li>
+      <li>Open PowerShell (Windows key → type "powershell" → Enter)</li>
+      <li>Run the command below to verify it worked</li>
+    </ol>
+    <p><b>PATH = a list of folders Windows searches when you type a command.</b> Adding Python to PATH means typing <code>python</code> anywhere works.</p>`, code:`python --version
+# Should print: Python 3.11.x (or higher)
+# If you see "not recognized" → PATH wasn't checked. Reinstall.`},
+    {h:"Install uv (fast Python package manager)", body:`<p><b>What is a package manager?</b> Software that downloads + installs libraries (other people's reusable code). Python ships with <code>pip</code>; <code>uv</code> is a faster modern replacement made by Astral.</p>
+    <p><b>Why we use it:</b> ML projects pull in 20-50 libraries (numpy, torch, anthropic, ...). uv installs them in seconds instead of minutes. Also handles virtual environments cleanly.</p>
+    <p><b>Virtual environment</b> = isolated Python "workspace" so libraries for one project don't conflict with another. Like separate desks.</p>`, code:`pip install uv
+uv --version
+# Should print: uv 0.x.x`},
+    {h:"Install Git", body:`<p><b>What is Git?</b> Software that tracks every change you make to your code. Lets you:</p>
+    <ul>
+      <li>Undo any change (like Ctrl+Z but forever)</li>
+      <li>Sync your code to GitHub (cloud backup + share)</li>
+      <li>Collaborate without overwriting each other's work</li>
+    </ul>
+    <p><b>How it works (mental model):</b> You write code → run <code>git add</code> (stage changes) → <code>git commit -m "msg"</code> (save snapshot with message) → <code>git push</code> (upload snapshots to GitHub).</p>
+    <p>Download installer at <a href="https://git-scm.com" target="_blank">git-scm.com</a>. Accept defaults. Verify:</p>`, code:`git --version
+# Should print: git version 2.x.x`},
+    {h:"Install VS Code (your editor)", body:`<p><b>What it is:</b> a free text editor optimized for code. Color-codes syntax, suggests completions, runs your code with one click.</p>
+    <ol>
+      <li>Download at <a href="https://code.visualstudio.com" target="_blank">code.visualstudio.com</a></li>
+      <li>Install with defaults</li>
+      <li>Open it, click Extensions icon (left sidebar, looks like 4 squares)</li>
+      <li>Search "Python" → install the official Microsoft one</li>
+      <li>Search "Jupyter" → install</li>
+    </ol>
+    <p>When you open a <code>.py</code> file, VS Code auto-detects Python and offers to run it (▶ button top-right).</p>`},
+    {h:"Get an Anthropic API key", body:`<p><b>What is an API key?</b> A long secret string (like a password) that proves your code is authorized to call Claude. Anthropic uses it to know who to bill.</p>
+    <p><b>Cost:</b> tiny. A test call is ~$0.001. $5 lasts weeks of learning. Set a spend limit in console to avoid runaway bills.</p>
+    <ol>
+      <li>Go to <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>, sign up (Google login OK)</li>
+      <li>Billing → add $5-10 credit (credit card)</li>
+      <li>Settings → Limits → set monthly cap (e.g. $20)</li>
+      <li>API Keys → "Create Key" → copy the string (starts with <code>sk-ant-...</code>) — <b>save it now, you can't view it again later</b></li>
+    </ol>
+    <p><b>Why we use <code>setx</code> instead of <code>$env:VAR = "..."</code>:</b></p>
+    <ul>
+      <li><code>$env:ANTHROPIC_API_KEY = "..."</code> sets the variable <b>only in the current PowerShell window</b>. Close window → gone.</li>
+      <li><code>setx ANTHROPIC_API_KEY "..."</code> writes it to <b>Windows registry</b> (HKCU\\Environment) → every future PowerShell inherits it.</li>
+      <li>After <code>setx</code>, you MUST close + reopen PowerShell. The current window doesn't see the change.</li>
+    </ul>
+    <p>This is why the course quiz asks about setx. It's a real footgun.</p>`, code:`setx ANTHROPIC_API_KEY "sk-ant-..."
+# CLOSE this PowerShell window
+# Open a NEW PowerShell window
+echo $env:ANTHROPIC_API_KEY
+# Should print your key. If empty → you forgot to close+reopen.`},
+    {h:"Your first Claude API call (explained line by line)", body:`<p>Open VS Code → File → New File → save as <code>test_claude.py</code> in any folder. Paste the code below.</p>
+    <p><b>What each line does:</b></p>
+    <ul>
+      <li><code>import anthropic</code> — load the Anthropic library (we install it next step)</li>
+      <li><code>client = anthropic.Anthropic()</code> — create a client object. It auto-reads your API key from <code>ANTHROPIC_API_KEY</code> env var.</li>
+      <li><code>messages.create(...)</code> — send a request to Claude</li>
+      <li><code>model="claude-opus-4-7"</code> — which Claude version (verify current ID at docs.anthropic.com/models)</li>
+      <li><code>max_tokens=100</code> — cap on response length (1 token ≈ 0.75 words). Cost cap.</li>
+      <li><code>messages=[...]</code> — conversation history. List of dicts with <code>role</code> (user or assistant) and <code>content</code> (text)</li>
+      <li><code>msg.content[0].text</code> — extract the response text from Claude's structured reply</li>
+    </ul>`, code:`# test_claude.py
+import anthropic
+
+client = anthropic.Anthropic()
+
+msg = client.messages.create(
+    model="claude-opus-4-7",
+    max_tokens=100,
+    messages=[
+        {"role": "user", "content": "In 5 words: what is an LLM?"}
+    ],
+)
+
+print(msg.content[0].text)
+print(f"Used {msg.usage.input_tokens} input + {msg.usage.output_tokens} output tokens")`},
+    {h:"Install the library and run it", body:`<p>Open PowerShell in the folder where you saved <code>test_claude.py</code> (in VS Code, View → Terminal opens one there). Run these two commands.</p>
+    <ul>
+      <li>First command: downloads + installs the <code>anthropic</code> library so Python can import it.</li>
+      <li>Second command: runs your script.</li>
+    </ul>
+    <p>If you see "AuthenticationError" → your API key isn't set. Run <code>echo $env:ANTHROPIC_API_KEY</code> — if empty, fix with <code>setx</code> + reopen shell.</p>`, code:`uv pip install anthropic
+python test_claude.py
+# Should print 5-word answer like "Predicts next token from context."
+# Plus token counts.`},
+    {h:"Create your GitHub repo + push code", body:`<p><b>What is GitHub?</b> Free cloud service that stores Git repos. Your code lives in folders called <b>repositories (repos)</b>.</p>
+    <p><b>Why we push code to GitHub:</b></p>
+    <ul>
+      <li>Backup — your laptop could die tomorrow</li>
+      <li>Portfolio — recruiters click these links</li>
+      <li>Sharing — show others your work</li>
+      <li>Activity graph — green squares = "this person codes"</li>
+    </ul>
+    <p><b>Steps:</b></p>
+    <ol>
+      <li>Sign up at <a href="https://github.com" target="_blank">github.com</a> if you haven't</li>
+      <li>Top-right "+" → New repository</li>
+      <li>Name it <code>AI_training</code>, leave it Public, DO NOT add README (we'll push our own)</li>
+      <li>Click Create</li>
+      <li>Now copy GitHub's URL — looks like <code>https://github.com/YOURNAME/AI_training.git</code></li>
+      <li>In PowerShell, run the commands below (replace USER with your username)</li>
+    </ol>
+    <p><b>What each git command does:</b></p>
+    <ul>
+      <li><code>git init</code> — turn this folder into a Git repo (creates hidden <code>.git/</code>)</li>
+      <li><code>git branch -M main</code> — rename default branch to "main"</li>
+      <li><code>git add .</code> — stage all files in folder for commit</li>
+      <li><code>git commit -m "init"</code> — save snapshot with message "init"</li>
+      <li><code>git remote add origin URL</code> — link local repo to GitHub URL</li>
+      <li><code>git push -u origin main</code> — upload your snapshots</li>
+    </ul>`, code:`mkdir AI_training
+cd AI_training
+git init
+git branch -M main
+echo "# AI Training" > README.md
+git add .
+git commit -m "init: zero-to-hero AI track"
+git remote add origin https://github.com/USER/AI_training.git
+git push -u origin main
+# First push will prompt for GitHub login (browser opens)`},
+    {h:"Optional but recommended: where to find current Claude model IDs", body:`<p>Model IDs change every release. Course examples use <code>claude-opus-4-7</code>, <code>claude-sonnet-4-6</code>, <code>claude-haiku-4-5-20251001</code> (2026 era).</p>
+    <p><b>Always verify at:</b> <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank">docs.anthropic.com/en/docs/about-claude/models</a></p>
+    <p>If a code example fails with "model_not_found", check that page for the current ID and replace.</p>`},
   ],
   quiz:[
     {type:"mcq", q:"Why setx instead of $env:VAR='...' in PowerShell?", options:["setx is faster","setx persists to user env; $env: lasts only current session","Add to $PROFILE — they're identical","Use Set-Item env:VAR — setx is deprecated"], answer:1, explain:"setx writes to HKCU\\Environment registry; future shells inherit. $env: is in-process. $PROFILE works but requires re-sourcing. Set-Item env: is also in-process."},
@@ -233,33 +364,195 @@ const COURSE = [
   project:{title:"Phase 0.5 deliverable", steps:["Write 5 pytest tests for a small Python module","Create a class with constructor + 3 methods","Push to AI_training repo under /python_basics/"]}
 },
 { id:2, title:"Phase 1 — Math Foundations", est:"~30 hrs",
-  intro:"Can't debug LLMs without linear algebra + gradients + probability. Skip = stuck at Phase 6.",
+  intro:"Can't debug LLMs without linear algebra + gradients + probability. Skip = stuck at Phase 6. This phase uses analogies + numeric examples; don't memorize formulas, build intuition.",
   lessons:[
-    {h:"Linear algebra essentials", body:`<ul>
-      <li><b>Vector</b>: arrow + list of numbers (both views matter)</li>
-      <li><b>Matrix</b>: a linear transformation (rotate/scale/shear)</li>
-      <li><b>Dot product</b> <code>a·b = Σaᵢbᵢ = |a||b|cosθ</code>: alignment / similarity</li>
-      <li><b>Matmul</b> <code>(m,k)@(k,n)→(m,n)</code>: compose transformations</li>
-      <li><b>Transpose</b> <code>Aᵀ</code>: flip rows/cols. Used in <code>QKᵀ</code> attention</li>
-      <li><b>Determinant</b>: volume scale factor; 0 = collapse (no inverse)</li>
-      <li><b>Eigenvectors</b>: axes that A only scales, doesn't rotate</li>
-      <li><b>SVD</b>: matrix = rotate → scale → rotate. Basis of PCA, LoRA</li>
-    </ul>`, code:`import numpy as np\nA = np.array([[1,2,3],[4,5,6],[7,8,10]])\nprint(A.T)              # transpose\nprint(A @ A)            # matmul (NOT *)\nvals, vecs = np.linalg.eig(A)\nU, S, Vt = np.linalg.svd(A)`},
-    {h:"Calculus — only what ML needs", body:`<ul>
-      <li><b>Derivative</b> f'(x): slope</li>
-      <li><b>Partial</b> ∂f/∂x: slope w.r.t. one var</li>
-      <li><b>Gradient</b> ∇f: vector of partials, direction of steepest ascent</li>
-      <li><b>Chain rule</b>: d/dx f(g(x)) = f'(g(x))·g'(x). Backprop = chain rule.</li>
+    {h:"Vectors — what they are and why ML uses them", body:`<p><b>A vector is two things at once:</b></p>
+    <ol>
+      <li>A <b>list of numbers</b> like <code>[3, 1, 4]</code></li>
+      <li>An <b>arrow in space</b> pointing from origin (0,0,0) to point (3,1,4)</li>
+    </ol>
+    <p>Both views matter. The "list" view is what you store in numpy. The "arrow" view is how you reason about it geometrically.</p>
+    <p><b>In ML, vectors are how we represent things:</b></p>
+    <ul>
+      <li>One sentence → a vector of 768 numbers (an "embedding")</li>
+      <li>One image → flatten 28×28 pixels to a 784-number vector</li>
+      <li>One user → vector of [age, num_purchases, total_spend, ...]</li>
     </ul>
-    <span class="formula">σ(z) = 1/(1+e⁻ᶻ),  σ'(z) = σ(z)(1-σ(z))</span>`},
-    {h:"Probability + info theory", body:`<ul>
-      <li><b>E[X]</b> = Σ x·p(x)</li>
-      <li><b>Bayes</b>: P(A|B) = P(B|A)·P(A)/P(B)</li>
-      <li><b>Entropy</b> H(p) = -Σ p log p</li>
-      <li><b>Cross-entropy</b> H(p,q) = -Σ p log q  ← <b>LLM training loss</b></li>
-      <li><b>KL divergence</b> KL(p‖q) = Σ p log(p/q)</li>
+    <p><b>Why?</b> Because computers can do math on vectors fast (matrix operations on GPUs). Once data is a vector, you can ask: "how similar are these two things?" That question is the heart of search, recommendation, and attention.</p>
+    <p><b>Concrete example.</b> Two cats represented as vectors of [tail_length, weight]:</p>
+    <pre><code>cat_A = [10, 8]   # short tail, heavy
+cat_B = [25, 4]   # long tail, light
+cat_C = [11, 9]   # short tail, heavy (like cat_A)</code></pre>
+    <p>Vectors cat_A and cat_C "point in similar directions" → similar cats. cat_B is different. We'll measure that with dot product in 2 lessons.</p>`},
+    {h:"Matrices and matrix multiplication", body:`<p><b>A matrix is a grid of numbers</b>, e.g. shape (rows, cols):</p>
+    <pre><code>A = [[1, 2, 3],
+     [4, 5, 6]]    # shape (2, 3)</code></pre>
+    <p><b>Geometric meaning:</b> a matrix is a <b>linear transformation</b> — multiplying by it rotates, scales, or shears space.</p>
+    <p><b>Matrix multiplication</b> <code>C = A @ B</code> combines two transformations.</p>
+    <p><b>Shape rule:</b> <code>(m, k) @ (k, n) → (m, n)</code>. Inner dims must match.</p>
+    <p><b>How a single cell is computed.</b> <code>C[i, j]</code> = dot product of row i of A with column j of B:</p>
+    <pre><code>A = [[1, 2],
+     [3, 4]]    # (2, 2)
+B = [[5, 6],
+     [7, 8]]    # (2, 2)
+
+C[0,0] = 1*5 + 2*7 = 19
+C[0,1] = 1*6 + 2*8 = 22
+C[1,0] = 3*5 + 4*7 = 43
+C[1,1] = 3*6 + 4*8 = 50
+
+C = [[19, 22],
+     [43, 50]]</code></pre>
+    <p><b>Why ML cares:</b> every neural network layer is a matmul. <code>output = input @ W</code>. A model with 1B parameters = a stack of huge matmuls. GPUs exist to do this fast.</p>
+    <p><b>Common confusion:</b> <code>@</code> is matmul. <code>*</code> is element-wise (Hadamard). Different operations.</p>`, code:`import numpy as np
+
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+print(A @ B)     # matrix multiply → [[19,22],[43,50]]
+print(A * B)     # element-wise   → [[5,12],[21,32]]
+print(A.T)       # transpose      → [[1,3],[2,4]]`},
+    {h:"Dot product — measuring similarity", body:`<p>The dot product of two vectors <code>a · b = a[0]*b[0] + a[1]*b[1] + ...</code> (sum element-wise products).</p>
+    <p><b>Geometric meaning:</b> <code>a · b = |a| · |b| · cos(θ)</code> where θ is the angle between them.</p>
+    <ul>
+      <li>θ = 0° (same direction): cos = 1 → max similarity</li>
+      <li>θ = 90° (perpendicular): cos = 0 → unrelated</li>
+      <li>θ = 180° (opposite): cos = -1 → max dissimilarity</li>
     </ul>
-    <div class="callout"><b>Key:</b> minimizing cross-entropy = making model assign high probability to correct tokens. That's LLM training in one line.</div>`},
+    <p><b>This is THE most important operation in modern AI.</b> Every "is X similar to Y" question — retrieval, attention, recommendation — uses dot products.</p>
+    <p><b>Numeric example with our cats from earlier:</b></p>
+    <pre><code>cat_A · cat_C = 10*11 + 8*9  = 110 + 72 = 182   # high → similar
+cat_A · cat_B = 10*25 + 8*4  = 250 + 32 = 282   # higher? but...
+
+# raw dot product favors big numbers. Normalize first:
+def cosine_sim(a, b):
+    return (a·b) / (|a| * |b|)
+
+cosine_sim(cat_A, cat_C) ≈ 0.998  # nearly identical direction
+cosine_sim(cat_A, cat_B) ≈ 0.766  # less similar direction</code></pre>
+    <p><b>In LLMs:</b> attention computes <code>Q · K</code> for every (query, key) pair → "how much does token Q want to attend to token K?". Same operation as the cat similarity.</p>`, code:`import numpy as np
+
+a = np.array([10, 8])
+b = np.array([25, 4])
+c = np.array([11, 9])
+
+# raw dot product
+print(a @ c)  # 182
+print(a @ b)  # 282
+
+# cosine similarity (normalized)
+def cosine(a, b):
+    return (a @ b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+print(cosine(a, c))  # ~0.998 — very similar
+print(cosine(a, b))  # ~0.766 — less similar`},
+    {h:"Transpose, determinant, eigenvectors, SVD (when you need each)", body:`<p>Four more concepts. Don't memorize, just know what they mean when you hit them later.</p>
+    <h4>Transpose Aᵀ</h4>
+    <p>Flips rows and columns. Shape (m, n) → (n, m). Used everywhere — most famously in attention's <code>Q K^T</code>.</p>
+    <pre><code>A  = [[1, 2, 3]]      # shape (1, 3)
+A.T = [[1], [2], [3]] # shape (3, 1)</code></pre>
+    <h4>Determinant</h4>
+    <p>Single number that says "how much does this matrix scale volume?". If <code>det(A) = 0</code>, the transformation squishes a dimension flat → not invertible. Useful for understanding when an operation loses information.</p>
+    <h4>Eigenvectors</h4>
+    <p>Special vectors that a matrix only <b>scales</b>, never rotates: <code>A · v = λ · v</code>. λ (lambda) is the eigenvalue — how much it scales.</p>
+    <p>Intuition: if A is a rotation, most vectors rotate. But the axis of rotation doesn't. That axis = eigenvector. λ = 1 (no scaling).</p>
+    <p>Used in PCA (find directions of most variance), stability analysis, graph algorithms.</p>
+    <h4>SVD — Singular Value Decomposition</h4>
+    <p>Every matrix can be decomposed into: <b>rotate → scale → rotate</b>. SVD gives you those three matrices.</p>
+    <p><code>A = U · Σ · Vᵀ</code>  where U, V are rotations and Σ is diagonal (scale factors called singular values).</p>
+    <p><b>This is the math behind LoRA.</b> If only the top-r singular values matter, you can approximate A with rank-r update → way fewer parameters. That's how LoRA fine-tunes 7B models on a laptop.</p>`, code:`import numpy as np
+A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 10]])
+
+print(A.T)                # transpose
+print(np.linalg.det(A))   # scalar volume scale
+
+vals, vecs = np.linalg.eig(A)   # eigenvalues + eigenvectors
+print("eigenvalues:", vals)
+
+U, S, Vt = np.linalg.svd(A)
+print("singular values:", S)    # important values; small ones can be dropped`},
+    {h:"Derivatives — the slope of a function", body:`<p><b>What a derivative is:</b> the slope of a function at a specific point. If <code>f(x) = x²</code>, then <code>f'(x) = 2x</code> — at x=3, slope is 6.</p>
+    <p><b>Why ML cares:</b> we have a <b>loss function</b> measuring how wrong the model is. We want to find parameter values where the loss is minimum. Derivatives tell us which direction (and how much) to move parameters to reduce loss.</p>
+    <p><b>Picture:</b> imagine you're on a hill in fog. You want to reach the bottom. Feel the ground around your feet → walk in the steepest-down direction → repeat. That's gradient descent.</p>
+    <p><b>The rules you actually need:</b></p>
+    <pre><code>f(x) = c          → f'(x) = 0     (constant has no slope)
+f(x) = x          → f'(x) = 1
+f(x) = x²         → f'(x) = 2x
+f(x) = xⁿ         → f'(x) = n·xⁿ⁻¹
+f(x) = eˣ         → f'(x) = eˣ    (special!)
+f(x) = log(x)     → f'(x) = 1/x
+f(x) = a·g(x)     → f'(x) = a·g'(x)         (constant factor)
+f(x) = g(x) + h(x)→ f'(x) = g'(x) + h'(x)  (sum)</code></pre>
+    <p><b>Worked example:</b> <code>f(x) = 3x² + 5x - 7</code></p>
+    <p>f'(x) = 3·(2x) + 5·(1) - 0 = <b>6x + 5</b></p>
+    <p>At x=2: slope is 6·2 + 5 = 17. Steep upward. To minimize f, move x left (decrease).</p>`},
+    {h:"Partial derivatives + gradient", body:`<p>Functions of multiple variables (like loss as function of millions of parameters) have a slope <b>per variable</b>.</p>
+    <p><b>Partial derivative</b> <code>∂f/∂x</code> = derivative treating only x as variable, others as constants.</p>
+    <p><b>Example.</b> <code>f(x, y) = x² + 3xy + y³</code></p>
+    <pre><code>∂f/∂x = 2x + 3y    (treat y as constant)
+∂f/∂y = 3x + 3y²   (treat x as constant)</code></pre>
+    <p><b>Gradient</b> <code>∇f</code> = vector of all partial derivatives. For our example: <code>∇f = [2x + 3y, 3x + 3y²]</code>.</p>
+    <p><b>Geometric meaning:</b> ∇f points in the direction of steepest <b>ascent</b>. So to minimize, step in the opposite direction: <code>x_new = x_old - α · ∇f(x_old)</code>. α is the learning rate.</p>
+    <p><b>In a neural net with 1B parameters:</b> ∇L is a 1B-dimensional vector. Each entry says "to decrease loss, nudge this param by this much." That's training in one line.</p>`},
+    {h:"Chain rule — the heart of backprop", body:`<p>When a function is built by composing other functions, the chain rule tells you how to take its derivative:</p>
+    <span class="formula">d/dx f(g(x)) = f'(g(x)) · g'(x)</span>
+    <p><b>Plain English:</b> outer derivative (evaluated at inner) <b>times</b> inner derivative.</p>
+    <p><b>Worked example.</b> <code>f(x) = sin(x²)</code>. Let <code>g(x) = x²</code>, outer is sin. Then:</p>
+    <pre><code>f'(x) = cos(x²) · 2x
+       = cos(inner) · derivative_of_inner</code></pre>
+    <p><b>Why it matters for ML.</b> A neural net is composition: <code>L = loss(model(input, W))</code>. To update W, we need <code>∂L/∂W</code>. That requires chaining through every layer.</p>
+    <p><b>Backpropagation = chain rule applied repeatedly backward through layers.</b> Each layer hands its downstream gradient back times its own local Jacobian.</p>
+    <p><b>Memorize this identity (appears everywhere):</b></p>
+    <span class="formula">σ(z) = 1 / (1 + e⁻ᶻ),  σ'(z) = σ(z) · (1 - σ(z))</span>
+    <p>The sigmoid's derivative can be written in terms of itself. Used in logistic regression gradients and historical RNN derivations.</p>`},
+    {h:"Probability — distributions, expectation, conditional", body:`<p><b>Random variable</b> X = a value drawn from some process. Result of a die roll, next token, image label.</p>
+    <p><b>Distribution</b> = how likely each outcome is.</p>
+    <ul>
+      <li><b>PMF</b> (probability mass function) for discrete outcomes: <code>P(X = "cat") = 0.7</code></li>
+      <li><b>PDF</b> (probability density function) for continuous: bell curve, etc.</li>
+    </ul>
+    <p><b>Expectation</b> E[X] = average outcome weighted by probability:</p>
+    <pre><code>E[X] = Σ x · P(X = x)
+
+Die: E[X] = 1·(1/6) + 2·(1/6) + ... + 6·(1/6) = 3.5</code></pre>
+    <p><b>Conditional probability</b> P(A | B) = "probability of A given that B happened":</p>
+    <pre><code>P(A | B) = P(A and B) / P(B)</code></pre>
+    <p><b>Bayes' theorem</b> — flip the conditional:</p>
+    <span class="formula">P(A | B) = P(B | A) · P(A) / P(B)</span>
+    <p><b>Worked Bayes example.</b> Disease affects 1% of people. Test is 99% accurate. You test positive. What's the chance you have it?</p>
+    <pre><code>P(disease | positive)
+= P(positive | disease) · P(disease) / P(positive)
+= 0.99 · 0.01 / [0.99·0.01 + 0.01·0.99]
+= 0.0099 / 0.0198
+= 0.5  (50%!)</code></pre>
+    <p>Intuition: false positives from the 99% of healthy people swamp the true positives from the 1% who are sick.</p>`},
+    {h:"Entropy, cross-entropy, KL — the LLM loss function", body:`<p>Three info-theory quantities. Memorize what each means.</p>
+    <h4>Entropy H(p)</h4>
+    <p>"How much uncertainty does this distribution have?"</p>
+    <span class="formula">H(p) = -Σ p(x) · log p(x)</span>
+    <ul>
+      <li>Coin flip 50/50 → H = 1 bit (maximum uncertainty)</li>
+      <li>Coin always heads → H = 0 (no uncertainty)</li>
+    </ul>
+    <h4>Cross-entropy H(p, q)</h4>
+    <p>"How many bits do I waste using distribution q to encode events from distribution p?"</p>
+    <span class="formula">H(p, q) = -Σ p(x) · log q(x)</span>
+    <p>p = true distribution (correct token = 100%, others 0%). q = model's predicted distribution. <b>Minimizing H(p, q) = training the LLM.</b></p>
+    <p><b>Concrete example.</b> True next token is "cat" (one-hot). Model outputs:</p>
+    <pre><code>q("cat") = 0.7
+q("dog") = 0.2
+q("bird") = 0.1
+
+Cross-entropy = -(1·log(0.7) + 0·log(0.2) + 0·log(0.1))
+              = -log(0.7) ≈ 0.357
+
+If model output q("cat") = 0.99:
+CE = -log(0.99) ≈ 0.010  ← lower loss, better</code></pre>
+    <h4>KL divergence KL(p ‖ q)</h4>
+    <p>"How different are distributions p and q?"</p>
+    <span class="formula">KL(p ‖ q) = Σ p(x) · log(p(x)/q(x)) = H(p, q) − H(p)</span>
+    <p>Always ≥ 0. Zero only when p = q. Used in RLHF and DPO as a "stay close to the original model" anchor.</p>
+    <div class="callout"><b>The summary:</b> LLMs are trained by minimizing cross-entropy between true next-token distribution (one-hot) and model's predicted distribution (softmax over vocab). Every gradient step nudges parameters so the model puts more probability mass on correct tokens.</div>`},
     {h:"From-scratch linear regression (pure numpy)", body:"<p>Derive gradients by hand, then code.</p>", code:`import numpy as np\nnp.random.seed(0)\nX = np.random.randn(100,1)\ny = 3*X.squeeze() + 2 + 0.1*np.random.randn(100)\n\nw, b, lr = np.random.randn(), 0.0, 0.1\nfor s in range(200):\n    yhat = w*X.squeeze() + b\n    loss = ((yhat - y)**2).mean()\n    grad_w = 2*((yhat - y)*X.squeeze()).mean()\n    grad_b = 2*(yhat - y).mean()\n    w -= lr*grad_w; b -= lr*grad_b\n    if s % 20 == 0: print(f"{s} {loss:.4f} {w:.3f} {b:.3f}")`},
     {h:"Resources", body:`<ul>
       <li>3Blue1Brown <a href="https://www.youtube.com/playlist?list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab" target="_blank">Essence of Linear Algebra</a> (~3 hrs, watch all)</li>
@@ -340,23 +633,73 @@ const COURSE = [
 { id:5, title:"Phase 4 — Deep Learning + PyTorch", est:"~40 hrs",
   intro:"Karpathy's <i>Neural Networks: Zero to Hero</i> is mandatory. Code along, don't just watch.",
   lessons:[
-    {h:"Perceptron → MLP", body:"<p>Neuron: y = σ(w·x + b). Stack into layers. Without nonlinearity, stack collapses to one linear transform. Universal approximation: 1 hidden layer of enough width approximates anything, but deep is more efficient.</p>"},
-    {h:"Activations", body:`<table>
-      <tr><th>Name</th><th>Formula</th><th>Use</th></tr>
-      <tr><td>Sigmoid</td><td>1/(1+e⁻ˣ)</td><td>Binary output. Avoid hidden (vanish).</td></tr>
-      <tr><td>Tanh</td><td>tanh(x)</td><td>Better hidden, still vanish.</td></tr>
-      <tr><td>ReLU</td><td>max(0,x)</td><td>Default. Dead neurons risk.</td></tr>
-      <tr><td>GELU</td><td>x·Φ(x)</td><td>Standard in transformers.</td></tr>
-      <tr><td>SiLU/Swish</td><td>x·σ(x)</td><td>Llama family.</td></tr>
-      <tr><td>Softmax</td><td>eˣⁱ/Σeˣʲ</td><td>Multi-class output.</td></tr>
-    </table>`},
-    {h:"Optimizers", body:`<ul>
-      <li><b>SGD</b>: simple, noisy, needs LR schedule</li>
-      <li><b>SGD+momentum</b>: accelerates consistent directions</li>
-      <li><b>Adam</b>: per-param adaptive LR via moment estimates</li>
-      <li><b>AdamW</b>: Adam + decoupled weight decay = LLM standard</li>
-      <li><b>Cosine LR + warmup</b>: warm up, cosine decay. LLM standard.</li>
-    </ul>`},
+    {h:"What a neural network IS (in plain English)", body:`<p><b>A neural network is a function.</b> Input goes in, output comes out. The "neural" part just means the function is built by stacking simple math operations (matmul + nonlinearity).</p>
+    <p><b>Why do we use them?</b> Because we don't know the function we want. We have examples of (input, correct_output) pairs. We let the network "learn" the function by adjusting its parameters until it matches the examples.</p>
+    <p><b>Single neuron:</b> takes inputs x, multiplies by weights w, adds bias b, passes through an activation function σ:</p>
+    <span class="formula">y = σ(w · x + b)</span>
+    <p>Mental model: it's a linear regression with a nonlinear twist at the end.</p>
+    <p><b>Why the nonlinearity?</b> Without σ, stacking 100 linear layers = still one linear function. Useless. The σ (ReLU, GELU, sigmoid) bends the function so stacking gives you expressive power.</p>`},
+    {h:"By-hand 2-neuron example", body:`<p>Let's compute one forward pass of a tiny network: 2 inputs → 1 hidden layer with 2 neurons → 1 output.</p>
+    <pre><code>x = [0.5, -1.0]              # input (2 numbers)
+
+# Layer 1: 2 inputs → 2 neurons
+W1 = [[0.8, 0.2],            # weights for neuron 1
+      [-0.5, 0.4]]            # weights for neuron 2
+b1 = [0.1, -0.1]
+
+h_raw = W1 @ x + b1
+      = [0.8*0.5 + 0.2*(-1) + 0.1,    -0.5*0.5 + 0.4*(-1) + (-0.1)]
+      = [0.4 - 0.2 + 0.1,             -0.25 - 0.4 - 0.1]
+      = [0.3, -0.75]
+
+# ReLU activation: max(0, x) element-wise
+h = [max(0, 0.3), max(0, -0.75)]
+  = [0.3, 0]                  # ← second neuron "dies" because negative
+
+# Layer 2: 2 inputs → 1 output
+W2 = [1.0, -2.0]
+b2 = 0.5
+
+y = W2 @ h + b2
+  = 1.0*0.3 + (-2.0)*0 + 0.5
+  = 0.8                       # final output</code></pre>
+    <p>That's a forward pass. Training works by adjusting W1, W2, b1, b2 (the "parameters") via backprop to make y match the target.</p>`},
+    {h:"Perceptron → MLP", body:`<p>Stack many neurons in a layer → <b>fully connected layer</b>. Stack many layers → <b>multilayer perceptron (MLP)</b>. That's the simplest deep neural net.</p>
+    <p><b>Universal approximation theorem:</b> an MLP with 1 hidden layer of enough width can approximate any continuous function. But "enough" might be millions of neurons.</p>
+    <p><b>Why go deep instead of wide?</b> Deep nets reuse intermediate computations and learn hierarchical features (edges → shapes → objects). Way more parameter-efficient than wide-and-shallow.</p>`},
+    {h:"Activations — what they are and why each exists", body:`<p>Activations are the nonlinear "bend" applied after each linear layer. Without them, deep stacks collapse to one linear function.</p>
+    <table>
+      <tr><th>Name</th><th>Formula</th><th>Where used</th><th>Why</th></tr>
+      <tr><td>Sigmoid</td><td>1/(1+e⁻ˣ)</td><td>Binary classifier output</td><td>Squeezes any real number into (0,1) — looks like probability. Avoid in hidden layers — derivatives max at 0.25 → vanishing gradients in deep stacks.</td></tr>
+      <tr><td>Tanh</td><td>(eˣ−e⁻ˣ)/(eˣ+e⁻ˣ)</td><td>Historical RNN hidden layers</td><td>Like sigmoid but range (-1, 1), zero-centered. Better than sigmoid hidden but still vanishes.</td></tr>
+      <tr><td>ReLU</td><td>max(0, x)</td><td>CNN hidden layers, MLPs</td><td>Cheap. No vanishing for positive values. Risk: "dead neurons" stuck outputting 0.</td></tr>
+      <tr><td>GELU</td><td>x · Φ(x) (Φ = Gaussian CDF)</td><td>Transformer FFN (GPT-2, BERT)</td><td>Smooth version of ReLU. Slight quality boost over ReLU.</td></tr>
+      <tr><td>SiLU / Swish</td><td>x · σ(x)</td><td>Llama, modern LLMs</td><td>Similar to GELU. Empirically performs slightly better in some LLM architectures.</td></tr>
+      <tr><td>Softmax</td><td>eˣⁱ / Σ eˣʲ</td><td>Multi-class output layer + attention</td><td>Turns a vector into a probability distribution (entries sum to 1). Always last layer for classification.</td></tr>
+    </table>
+    <p><b>Rule of thumb:</b> for new code, use GELU in transformers, ReLU otherwise. Don't experiment with activations early — focus on data + scale.</p>`},
+    {h:"Optimizers — how parameters get updated", body:`<p>After backprop computes gradient ∇L, the <b>optimizer</b> uses it to update parameters. Different strategies trade off speed vs stability.</p>
+    <h4>SGD (Stochastic Gradient Descent)</h4>
+    <p><code>W ← W - α · ∇L</code> — take a step in steepest-descent direction, size α (learning rate).</p>
+    <p>Simple but noisy. Needs careful LR schedule. Default in some image CNN papers.</p>
+    <h4>SGD + Momentum</h4>
+    <p>Keep a running average of gradients (velocity v):</p>
+    <pre><code>v ← β·v + ∇L         (β=0.9 typical)
+W ← W - α·v</code></pre>
+    <p>Accelerates updates in directions where gradient consistently points. Damps noisy directions.</p>
+    <p>Analogy: rolling a ball downhill instead of teleporting each step. Builds speed in good directions.</p>
+    <h4>Adam</h4>
+    <p>Tracks per-parameter adaptive learning rate using first moment (mean) and second moment (variance) of gradients. Each parameter gets a custom step size based on its own gradient history.</p>
+    <p>Result: trains fast on diverse parameter scales. Default for most NN work in 2015-2020.</p>
+    <h4>AdamW (Adam + decoupled weight decay)</h4>
+    <p>Adam has a subtle bug: L2 regularization gets scaled by the adaptive LR, making it weaker on big-gradient parameters. AdamW fixes this by applying weight decay separately.</p>
+    <p><b>Use AdamW for all transformer / LLM training.</b> Typical params: <code>lr=3e-4 (small) to 6e-4, β1=0.9, β2=0.95, weight_decay=0.1</code>.</p>
+    <h4>LR schedule (cosine + warmup)</h4>
+    <p>Constant LR is bad — too high causes instability, too low wastes compute. LLMs use:</p>
+    <ol>
+      <li><b>Warmup</b>: 1-5% of total steps, linearly ramp LR from 0 to peak. Lets Adam's moment estimates and LayerNorm stats settle before applying full LR.</li>
+      <li><b>Cosine decay</b>: smoothly drop LR following half a cosine curve until end of training. Hits ~10% of peak by the end.</li>
+    </ol>`},
     {h:"Normalization", body:`<ul>
       <li><b>BatchNorm</b>: across batch dim. CNN standard.</li>
       <li><b>LayerNorm</b>: across feature dim per sample. <b>Transformer standard</b>.</li>
@@ -414,19 +757,83 @@ const COURSE = [
   project:{title:"Phase 5 deliverable", steps:["BPE tokenizer encode/decode roundtrip","Char-level RNN on Tiny Shakespeare (historical literacy)"]}
 },
 { id:7, title:"Phase 6 — Transformers From Scratch", est:"~40 hrs",
-  intro:"Heart of course. Don't move past until you can rebuild nanoGPT blindfolded.",
+  intro:"Heart of course. Don't move past until you can rebuild nanoGPT blindfolded. We'll walk a 3-token toy example by hand before jumping into code.",
   lessons:[
-    {h:"Self-attention", body:`<p>For each token, weighted sum of all tokens' values, weighted by relevance.</p>
-    <span class="formula">Attention(Q,K,V) = softmax(QKᵀ / √d_k) · V</span>
+    {h:"The problem attention solves", body:`<p><b>Problem:</b> in a sentence "<i>The cat that lived next door sat on the mat</i>", what does "sat" refer to? Answer: <b>cat</b>. But "cat" is 6 words back. How can the model carry that information forward?</p>
+    <p><b>Old answer (RNN/LSTM):</b> pass a "hidden state" forward token by token, hoping it remembers. Doesn't scale — forgets long-range info.</p>
+    <p><b>New answer (Transformer attention):</b> for each token, look at EVERY other token directly and decide how much to "attend to" each. No sequential bottleneck. All tokens processed in parallel.</p>
+    <p><b>Big idea:</b> a token's representation = weighted sum of other tokens' representations, where weights are learned per-context.</p>`},
+    {h:"Q, K, V — three lenses on each token", body:`<p>For each token's embedding vector x, we compute three projections via learned linear layers:</p>
     <ul>
-      <li><b>Q</b>: query — "what am I looking for?"</li>
-      <li><b>K</b>: key — "what do I contain?"</li>
-      <li><b>V</b>: value — "what do I deliver?"</li>
-      <li><b>QKᵀ</b>: similarity scores (seq×seq)</li>
-      <li><b>/√d_k</b>: scale prevents softmax saturation</li>
-      <li><b>softmax</b>: → weights summing 1</li>
-      <li><b>·V</b>: weighted sum</li>
-    </ul>`},
+      <li><b>Q (query)</b> = x · W_Q — "what am I looking for?"</li>
+      <li><b>K (key)</b> = x · W_K — "what do I contain?"</li>
+      <li><b>V (value)</b> = x · W_V — "what do I deliver if attended to?"</li>
+    </ul>
+    <p><b>Library analogy:</b> imagine searching a library.</p>
+    <ul>
+      <li>Your <b>question</b> is a query Q</li>
+      <li>Each book has a <b>title/tags</b> = its key K</li>
+      <li>The actual <b>content</b> of the book = its value V</li>
+      <li>You compare your Q to each K, find best matches, fetch their V</li>
+    </ul>
+    <p><b>Why three?</b> Tokens advertise themselves (K) differently from what they actually mean (V). And the question (Q) is different from both. Separating them gives the model flexibility.</p>`},
+    {h:"Self-attention walkthrough by hand (3 tokens, d=2)", body:`<p>Let's compute attention for 3 tokens with embedding dim d=2. Real models use d=64+ per head, but the math is identical.</p>
+    <pre><code>tokens: ["The", "cat", "sat"]
+
+# After Q, K, V projections (skip the W matrices for clarity):
+Q = [[1, 0],     # "The" looks for ...
+     [0, 1],     # "cat" looks for ...
+     [1, 1]]     # "sat" looks for ...
+
+K = [[1, 0],     # "The" contains
+     [0, 1],     # "cat" contains
+     [1, 1]]     # "sat" contains  (same as Q here for simplicity)
+
+V = [[1, 2],     # "The"'s value
+     [3, 4],     # "cat"'s value
+     [5, 6]]     # "sat"'s value
+
+# STEP 1: compute QK^T (similarity scores between every Q and every K)
+QK^T = Q @ K.T
+
+For "sat" (Q row [1,1]):
+  vs K_The [1,0]:  1*1 + 1*0 = 1
+  vs K_cat [0,1]:  1*0 + 1*1 = 1
+  vs K_sat [1,1]:  1*1 + 1*1 = 2
+
+So scores for "sat" attending to others: [1, 1, 2]
+
+# STEP 2: scale by sqrt(d_k) = sqrt(2) ≈ 1.41
+scaled = [1/1.41, 1/1.41, 2/1.41] ≈ [0.71, 0.71, 1.41]
+
+# STEP 3: apply causal mask (decoder LLM — "sat" can't see future)
+"sat" is position 2, can see 0,1,2 → no change here
+For "cat" (position 1): mask out position 2
+For "The" (position 0): mask out positions 1, 2 (set to -inf)
+
+# STEP 4: softmax (converts scores → weights summing to 1)
+softmax([0.71, 0.71, 1.41])
+≈ [exp(0.71), exp(0.71), exp(1.41)] / sum
+≈ [2.03, 2.03, 4.10] / 8.16
+≈ [0.25, 0.25, 0.50]
+
+# STEP 5: weighted sum of V vectors
+output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
+                 = 0.25 * [1,2] + 0.25 * [3,4] + 0.50 * [5,6]
+                 = [0.25, 0.5] + [0.75, 1] + [2.5, 3]
+                 = [3.5, 4.5]</code></pre>
+    <p>That's it. Attention's full operation, by hand. Repeat for "The" and "cat" using their Qs. Stack into output matrix. Done.</p>
+    <p><b>Open the "Attention Toy" game</b> in the Games tab to play with this interactively.</p>`},
+    {h:"The formula and what each piece does", body:`<span class="formula">Attention(Q, K, V) = softmax(Q Kᵀ / √d_k) · V</span>
+    <ul>
+      <li><b>Q Kᵀ</b>: similarity matrix, shape (seq × seq). Entry [i,j] = how much Q_i wants K_j.</li>
+      <li><b>/√d_k</b>: <b>scaling</b>. Without this, dot products grow with d_k. Large values → softmax becomes nearly one-hot → tiny gradients on losing positions → vanishing gradient. Dividing by √d_k keeps variance bounded.</li>
+      <li><b>softmax</b>: turns scores into a probability distribution (each row sums to 1).</li>
+      <li><b>· V</b>: weighted sum of values.</li>
+    </ul>
+    <p><b>Causal mask (decoder-only LLMs like GPT):</b> set scores for future positions to <code>-inf</code> before softmax. After softmax they become 0 → no leakage of future info. This is what lets GPT learn to predict next token.</p>`},
+    {h:"Self-attention", body:`<p>The above is <b>self-attention</b>: Q, K, V all come from the same sequence. Tokens attend to other tokens in their own context.</p>
+    <p>(Encoder-decoder models like T5 also use cross-attention where Q comes from decoder, K and V from encoder. We focus on decoder-only.)</p>`},
     {h:"Multi-head attention", body:"<p>Run h attentions in parallel with different projections. Concat. Lets model attend to different relationships simultaneously.</p>", code:`class MHA(nn.Module):\n    def __init__(self, d_model, n_heads):\n        super().__init__()\n        assert d_model % n_heads == 0\n        self.d_h = d_model // n_heads; self.h = n_heads\n        self.qkv = nn.Linear(d_model, 3*d_model, bias=False)\n        self.proj = nn.Linear(d_model, d_model)\n    def forward(self, x, mask=None):\n        B, T, C = x.shape\n        qkv = self.qkv(x).reshape(B, T, 3, self.h, self.d_h)\n        q, k, v = qkv.unbind(dim=2)\n        q, k, v = [t.transpose(1,2) for t in (q,k,v)]\n        att = (q @ k.transpose(-2,-1)) / (self.d_h ** 0.5)\n        if mask is not None:\n            att = att.masked_fill(mask==0, float('-inf'))\n        att = F.softmax(att, dim=-1)\n        out = (att @ v).transpose(1,2).reshape(B, T, C)\n        return self.proj(out)`},
     {h:"Causal mask + positional encoding", body:`<ul>
       <li><b>Causal mask</b>: lower-tri, -inf future positions before softmax. Decoder-only LLMs.</li>
