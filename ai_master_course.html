@@ -178,6 +178,17 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 </div>
 <div id="main-content" tabindex="-1" class="sr-only">main content landmark</div>
 <div class="xp-pop" id="xp-pop" role="status" aria-live="polite"></div>
+<div id="modal-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:22px;max-width:440px;width:92%">
+    <h3 id="modal-title" style="margin-top:0">Confirm</h3>
+    <p id="modal-body" style="color:var(--ink)"></p>
+    <div id="modal-extra"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button id="modal-cancel" style="background:var(--panel2);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:8px 14px;cursor:pointer">Cancel</button>
+      <button id="modal-ok" style="background:var(--accent);color:#0b0f17;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600">OK</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ============================== COURSE DATA ============================== */
@@ -1189,6 +1200,47 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
       <li>Log + alert on suspicious patterns (instructions in user input, role markers, language switches)</li>
       <li>Human-in-loop for destructive actions</li>
     </ul>`},
+    {h:"Multimodal — vision + audio with Claude", body:`<p>Claude API accepts images natively (Sonnet 4.6+, Opus 4.7). For audio: transcribe with Whisper first, then send text. For images directly:</p>
+    <pre><code>import anthropic, base64
+
+with open("chart.png", "rb") as f:
+    img_b64 = base64.standard_b64encode(f.read()).decode()
+
+resp = client.messages.create(
+    model="claude-opus-4-7",
+    max_tokens=1024,
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "image", "source": {"type": "base64",
+                "media_type": "image/png", "data": img_b64}},
+            {"type": "text", "text": "What does this chart show? Quote any numbers."},
+        ],
+    }],
+)
+print(resp.content[0].text)</code></pre>
+    <p><b>Image input limits:</b> max 5MB, max 8000×8000px, JPEG/PNG/GIF/WebP. Multiple images per message supported.</p>
+    <h4>How vision works (briefly)</h4>
+    <ul>
+      <li>Image → grid of patches (e.g. 14×14 pixels each) → patch embeddings</li>
+      <li>Patches treated as tokens by transformer (like text tokens)</li>
+      <li>Image and text tokens interleave in the same context window</li>
+      <li>Models trained with image-text pairs (CLIP-style) learn to align modalities</li>
+    </ul>
+    <h4>Audio pipeline (Whisper + LLM)</h4>
+    <pre><code># pip install openai-whisper
+import whisper, anthropic
+model = whisper.load_model("base")    # or "small", "medium", "large-v3"
+result = model.transcribe("call.mp3")
+text = result["text"]
+
+cl = anthropic.Anthropic()
+summary = cl.messages.create(
+    model="claude-sonnet-4-6", max_tokens=512,
+    messages=[{"role":"user","content":f"Summarize:\\n{text}"}],
+).content[0].text</code></pre>
+    <h4>Eval for multimodal</h4>
+    <p>Golden set must include images. Use LLM-judge with rubrics like "did the model correctly identify the chart type / numbers / labels". Track separately from text-only evals.</p>`},
     {h:"Cost engineering", body:`<h4>Token accounting</h4>
     <ul>
       <li>Log <code>(input_tokens, output_tokens, model, cached_tokens)</code> per request</li>
@@ -1397,6 +1449,94 @@ python -m vllm.entrypoints.openai.api_server \\
       <li><b>Cost cap</b> per tenant monthly</li>
       <li><b>Red-team your own app weekly</b></li>
     </ul>`},
+    {h:"Linux/shell bridge (you'll deploy to Linux servers)", body:`<p>Your laptop is Windows but production runs Linux. Learn enough shell to operate.</p>
+    <h4>20 commands you actually need</h4>
+    <table>
+      <tr><th>Command</th><th>Does</th></tr>
+      <tr><td><code>ls -la</code></td><td>List files with details + hidden</td></tr>
+      <tr><td><code>cd /path</code></td><td>Change directory</td></tr>
+      <tr><td><code>pwd</code></td><td>Print working directory</td></tr>
+      <tr><td><code>cat file</code></td><td>Print file contents</td></tr>
+      <tr><td><code>less file</code></td><td>Page through long file (q to quit)</td></tr>
+      <tr><td><code>head -n 20 file</code> / <code>tail -f log</code></td><td>First N lines / follow log live</td></tr>
+      <tr><td><code>grep -r "pattern" .</code></td><td>Recursive search in dir</td></tr>
+      <tr><td><code>find . -name "*.py"</code></td><td>Find files matching glob</td></tr>
+      <tr><td><code>cp src dst</code> / <code>mv src dst</code> / <code>rm file</code></td><td>Copy/move/delete</td></tr>
+      <tr><td><code>chmod +x script.sh</code></td><td>Make executable</td></tr>
+      <tr><td><code>ps aux | grep python</code></td><td>List processes matching</td></tr>
+      <tr><td><code>kill -9 PID</code></td><td>Force-kill process by ID</td></tr>
+      <tr><td><code>top</code> / <code>htop</code></td><td>Live CPU/mem dashboard</td></tr>
+      <tr><td><code>df -h</code></td><td>Disk usage human-readable</td></tr>
+      <tr><td><code>nvidia-smi</code></td><td>GPU utilization, mem, processes</td></tr>
+      <tr><td><code>ssh user@host</code></td><td>Remote login</td></tr>
+      <tr><td><code>scp local user@host:remote</code></td><td>Copy files over SSH</td></tr>
+      <tr><td><code>systemctl status myapp</code></td><td>Check systemd service</td></tr>
+      <tr><td><code>journalctl -u myapp -f</code></td><td>Tail service logs live</td></tr>
+      <tr><td><code>curl -X POST localhost:8000/ask -d '...'</code></td><td>Hit an HTTP endpoint</td></tr>
+    </table>
+    <h4>Pipes + redirects (the Unix superpower)</h4>
+    <pre><code># pipe one command's output to next
+ps aux | grep python | wc -l        # count python processes
+
+# redirect stdout (overwrite vs append)
+python train.py > output.log
+python train.py >> output.log 2>&1  # both stdout+stderr appended
+
+# background process with output to file
+nohup python serve.py > server.log 2>&1 &
+</code></pre>
+    <h4>Permissions: chmod numeric</h4>
+    <pre><code>chmod 755 file   # rwx r-x r-x (owner all, others read+exec)
+chmod 644 file   # rw- r-- r-- (owner rw, others read)
+chmod 600 file   # rw- --- --- (owner only — use for API keys, SSH keys)
+</code></pre>
+    <h4>WSL: get Linux on Windows free</h4>
+    <p>Run as admin: <code>wsl --install</code>. Installs Ubuntu in ~2 min. Open terminal → "Ubuntu" → you're in Linux without VM overhead. Practice every Linux command above here.</p>`},
+    {h:"Speculative decoding — 2-3× faster inference", body:`<p><b>The bottleneck:</b> LLM inference is autoregressive — generate one token, then the next. Each token = full forward pass on a 70B model = ~50ms. Slow.</p>
+    <p><b>The trick:</b> use a small <b>draft model</b> to predict next K tokens cheaply, then have the big model verify all K in <b>one</b> forward pass (it does parallel compute on the K candidates).</p>
+    <ol>
+      <li>Draft model (1B) generates 4 candidate tokens — cheap</li>
+      <li>Big model (70B) does ONE forward pass on prompt + 4 candidates</li>
+      <li>For each position, check if big model's top prediction matches draft</li>
+      <li>Accept matched prefix; from first mismatch, take big model's prediction</li>
+      <li>Best case: all 4 match → 4× speedup. Worst case: 0 match → same as no spec.</li>
+    </ol>
+    <p><b>Expected:</b> 2-3× wall-clock for typical text. No quality change (output is mathematically identical to big model alone).</p>
+    <pre><code>python -m vllm.entrypoints.openai.api_server \\
+  --model meta-llama/Llama-3.1-70B-Instruct \\
+  --speculative-model meta-llama/Llama-3.2-1B-Instruct \\
+  --num-speculative-tokens 4 \\
+  --dtype bfloat16
+</code></pre>`},
+    {h:"Quantization (GPTQ / AWQ / GGUF / NF4)", body:`<p>Weights default to bf16 (2 bytes each). A 70B model = 140GB. Doesn't fit on a 24GB GPU. Quantization shrinks weights to lower precision, trading minor quality loss for huge memory savings.</p>
+    <h4>Format comparison</h4>
+    <table>
+      <tr><th>Format</th><th>Bits/weight</th><th>70B size</th><th>Quality loss</th><th>Tool</th></tr>
+      <tr><td>bf16 (baseline)</td><td>16</td><td>140 GB</td><td>0%</td><td>—</td></tr>
+      <tr><td>int8</td><td>8</td><td>70 GB</td><td>&lt; 1%</td><td>bitsandbytes</td></tr>
+      <tr><td><b>GPTQ 4-bit</b></td><td>4</td><td>35 GB</td><td>~1-2%</td><td>AutoGPTQ; standard GPU inference</td></tr>
+      <tr><td><b>AWQ 4-bit</b></td><td>4</td><td>35 GB</td><td>~1-2%</td><td>AutoAWQ; sometimes better than GPTQ</td></tr>
+      <tr><td><b>GGUF (Q4_K_M)</b></td><td>~4.5</td><td>~40 GB</td><td>~1-2%</td><td>llama.cpp; best for Mac/CPU/edge</td></tr>
+      <tr><td>NF4 (QLoRA)</td><td>4</td><td>35 GB</td><td>~1-2%</td><td>bitsandbytes; used during fine-tuning</td></tr>
+    </table>
+    <h4>When to use which</h4>
+    <ul>
+      <li><b>Inference on GPU</b>: AWQ or GPTQ 4-bit. Test on your golden set first.</li>
+      <li><b>Inference on Mac/CPU</b>: GGUF via llama.cpp or Ollama. Q4_K_M is the sweet spot.</li>
+      <li><b>Fine-tuning on consumer GPU</b>: NF4 + LoRA adapters (= QLoRA).</li>
+    </ul>
+    <h4>Loading a pre-quantized model</h4>
+    <pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained(
+    "TheBloke/Llama-3.1-70B-Instruct-GPTQ",
+    device_map="auto",
+)
+tok = AutoTokenizer.from_pretrained("TheBloke/Llama-3.1-70B-Instruct-GPTQ")
+inputs = tok("Hello", return_tensors="pt").to("cuda")
+out = model.generate(**inputs, max_new_tokens=50)
+print(tok.decode(out[0]))
+</code></pre>`},
   ],
   quiz:[
     {type:"mcq", q:"vLLM > naive HF generate() because:", options:["Lighter deps","Continuous batching + PagedAttention → 5-20× throughput","Smaller models","Free"], answer:1, explain:"Naive generate idles GPU. vLLM packs requests + paged KV cache → utilization."},
@@ -1426,6 +1566,34 @@ python -m vllm.entrypoints.openai.api_server \\
       <li>Jiang 2024 — Mixtral MoE</li>
       <li>Anthropic Claude 3/3.5/4 model cards</li>
     </ol>`},
+    {h:"Mechanistic interpretability (Anthropic's flagship direction)", body:`<p><b>Why care:</b> if you're using Claude or building safety-critical AI, you should understand the research direction that opens the black box. Anthropic's interp team is one of the largest in industry; the field is hiring.</p>
+    <h4>Core idea</h4>
+    <p>Mechanistic interpretability tries to reverse-engineer neural networks into human-understandable algorithms. Not "the model has 175B params and outputs token T"; instead "this attention head copies entity names, this MLP layer detects negation".</p>
+    <h4>Key concepts</h4>
+    <ul>
+      <li><b>Features</b>: directions in activation space that correspond to human concepts (e.g., "is a person's name", "is positive sentiment").</li>
+      <li><b>Circuits</b>: groups of attention heads + MLPs that together implement an algorithm (e.g., indirect object identification).</li>
+      <li><b>Superposition</b>: networks compress more features than they have neurons by representing features as overlapping directions.</li>
+      <li><b>Sparse autoencoders (SAEs)</b>: trained to decompose model activations into sparse interpretable features. Anthropic's main tool. Has scaled to Claude 3 Sonnet — Anthropic reported finding millions of features.</li>
+      <li><b>Activation patching</b>: swap activations from one input into another, see what changes. Identifies which components are causally responsible.</li>
+      <li><b>Causal interventions</b>: ablate (zero out) or boost specific features to test hypotheses.</li>
+    </ul>
+    <h4>Must-read posts (free, no paywall)</h4>
+    <ul>
+      <li>Anthropic — <i>Scaling Monosemanticity</i> (2024): SAEs on Claude 3 Sonnet, "Golden Gate Bridge feature"</li>
+      <li>Anthropic — <i>Towards Monosemanticity</i> (2023): SAEs on small models</li>
+      <li>Olah et al. — <i>Zoom In: An Introduction to Circuits</i> (Distill.pub)</li>
+      <li>Nanda — <i>An Extremely Opinionated Annotated List of Favorite Mechanistic Interpretability Papers</i></li>
+      <li>Anthropic's Interpretability team blog: anthropic.com/research</li>
+    </ul>
+    <h4>Hands-on starting points</h4>
+    <ul>
+      <li><a href="https://github.com/TransformerLensOrg/TransformerLens" target="_blank">TransformerLens</a> — Python library for poking inside HF transformer models (extract activations, patch, ablate)</li>
+      <li><a href="https://github.com/jbloomAus/SAELens" target="_blank">SAELens</a> — train and analyze sparse autoencoders</li>
+      <li>Neel Nanda's tutorial notebooks (Colab-runnable)</li>
+    </ul>
+    <h4>Why it's a job market angle</h4>
+    <p>Anthropic, DeepMind, OpenAI, Goodfire, METR, MATS hire interp researchers. Small field, high signal, distinct from "ML engineer". A blog post replicating one paper's result = visible portfolio piece.</p>`},
     {h:"3-pass paper reading", body:`<ol>
       <li>5 min: title, abstract, intro, conclusions, figures</li>
       <li>1 hr: full read, ignore proofs, 1-paragraph summary</li>
@@ -1709,10 +1877,47 @@ function importProgress(ev){
   };
   r.readAsText(f);
 }
-function resetProgress(){
-  if(!confirm("Reset ALL progress?")) return;
-  localStorage.removeItem(STORAGE_KEY);
+function showModal({title, body, okLabel="OK", requireType=null}){
+  return new Promise(resolve=>{
+    document.getElementById("modal-title").textContent = title;
+    document.getElementById("modal-body").textContent = body;
+    const extra = document.getElementById("modal-extra");
+    const ok = document.getElementById("modal-ok");
+    ok.textContent = okLabel;
+    extra.innerHTML = "";
+    if(requireType){
+      extra.innerHTML = `<p style="font-size:13px;color:var(--muted);margin-top:10px">Type <b>${requireType}</b> to confirm:</p><input id="modal-input" type="text" style="width:100%;background:var(--code);border:1px solid var(--border);color:var(--ink);border-radius:6px;padding:8px;font-family:inherit">`;
+      ok.disabled = true; ok.style.opacity = "0.5";
+      setTimeout(()=>{
+        const inp = document.getElementById("modal-input");
+        inp.focus();
+        inp.addEventListener("input", e=>{
+          const match = e.target.value === requireType;
+          ok.disabled = !match;
+          ok.style.opacity = match ? "1" : "0.5";
+        });
+      }, 50);
+    } else {
+      ok.disabled = false; ok.style.opacity = "1";
+    }
+    const backdrop = document.getElementById("modal-backdrop");
+    backdrop.style.display = "flex";
+    const close = (val)=>{ backdrop.style.display="none"; ok.onclick=null; document.getElementById("modal-cancel").onclick=null; resolve(val); };
+    ok.onclick = ()=>close(true);
+    document.getElementById("modal-cancel").onclick = ()=>close(false);
+  });
+}
+async function resetProgress(){
+  const ok = await showModal({
+    title:"Reset all progress?",
+    body:"This permanently deletes your XP, badges, quiz answers, project checks, and portfolio links. Cannot be undone. Export first if you want a backup.",
+    okLabel:"Reset everything",
+    requireType:"RESET",
+  });
+  if(!ok) return;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
   state = loadProgress(); render();
+  xpPop("Progress reset");
 }
 
 /* ============================== XP / LEVELS / STREAK ============================== */
@@ -1962,6 +2167,7 @@ function renderMatch(g){
 }
 function matchClick(k, idx){
   const ms = matchState;
+  if(!ms) return;
   if(ms.matched.has(idx)) return;  // guard: matched item not clickable
   if(ms.picked===null){ ms.picked = k; renderMain(); return; }
   if(ms.picked===k){ ms.picked = null; renderMain(); return; }
@@ -2161,7 +2367,39 @@ function flashNext(){ flashState.i++; flashState.choice=null; flashState.reveale
 function flashReset(){ flashState = null; renderMain(); }
 
 /* --------------------- GAME: TOKEN LAB --------------------- */
-function tokLabBpe(text){
+const GPT2_MERGES = [
+  ["t","h","th"],["h","e","he"],["i","n","in"],["e","r","er"],["a","n","an"],
+  ["r","e","re"],["o","n","on"],["a","t","at"],["e","n","en"],["n","d","nd"],
+  ["o","r","or"],["e","s","es"],["i","s","is"],["i","t","it"],["a","r","ar"],
+  ["t","e","te"],["s","t","st"],["e","d","ed"],["l","e","le"],["o","u","ou"],
+  ["a","l","al"],["s","e","se"],["a","s","as"],["t","i","ti"],["o","f","of"],
+  ["m","e","me"],["d","e","de"],["t","o","to"],["b","e","be"],["w","e","we"],
+  [" ","t"," t"],[" ","a"," a"],[" ","s"," s"],[" ","i"," i"],[" ","o"," o"],
+  [" ","w"," w"],[" ","c"," c"],[" ","b"," b"],[" ","p"," p"],[" ","m"," m"],
+  [" ","d"," d"],[" ","f"," f"],[" ","h"," h"],[" ","l"," l"],[" ","n"," n"],
+  [" t","he"," the"],[" a","nd"," and"],[" o","f"," of"],[" t","o"," to"],
+  [" i","n"," in"],[" i","s"," is"],[" i","t"," it"],[" w","as"," was"],
+  [" w","ith"," with"],[" t","hat"," that"],[" f","or"," for"],[" b","e"," be"],
+  ["th","e","the"],["an","d","and"],["in","g","ing"],
+];
+function applyMerges(toks, merges){
+  for(const [a, b, c] of merges){
+    const out = []; let i = 0;
+    while(i < toks.length){
+      if(i < toks.length-1 && toks[i]===a && toks[i+1]===b){ out.push(c); i+=2; }
+      else { out.push(toks[i]); i++; }
+    }
+    toks = out;
+  }
+  return toks;
+}
+function tokLabBpe(text, mode){
+  if(mode === "gpt2"){
+    return {toks: applyMerges(Array.from(text), GPT2_MERGES), merges: GPT2_MERGES.slice()};
+  }
+  return tokLabBpeLearned(text);
+}
+function tokLabBpeLearned(text){
   // Learn merges from the actual input (toy BPE), then apply.
   let toks = Array.from(text);
   const merges = [];
@@ -2192,7 +2430,8 @@ function tokLabBpe(text){
 }
 function tokLabPaint(){
   const text = document.getElementById("tok-input")?.value ?? "the cat sat on the mat";
-  const {toks, merges} = tokLabBpe(text);
+  const mode = document.querySelector('input[name="tok-mode"]:checked')?.value || "learn";
+  const {toks, merges} = tokLabBpe(text, mode);
   const colors = ["#7aa2ff","#9d7aff","#ffd166","#3ecf8e","#ffb547","#ff6b6b","#7ad4ff"];
   const out = document.getElementById("tok-out");
   if(out) out.innerHTML = toks.map((t,i)=>`<span class="token" style="border-color:${colors[i%colors.length]};color:${colors[i%colors.length]}">${escapeHtml(t)}</span>`).join("");
@@ -2216,15 +2455,19 @@ function renderTokenLab(){
   const text = state.games["token-lab"]?.text || "the cat sat on the mat";
   setTimeout(tokLabPaint, 0);
   return `<div class="card">
-    <p>Type any text. The lab learns merges from your input (mini BPE, up to 20 merges) and re-tokenizes live.</p>
+    <p>Type any text. Choose mode: <b>Learned</b> trains merges from YOUR input (mini BPE). <b>GPT-2 style</b> applies ~60 prebaked common-English merges (mimics how real tiktoken feels).</p>
+    <div style="display:flex;gap:14px;margin:8px 0;flex-wrap:wrap">
+      <label style="font-size:13px"><input type="radio" name="tok-mode" value="learn" checked oninput="tokLabPaint()"> Learned (from input)</label>
+      <label style="font-size:13px"><input type="radio" name="tok-mode" value="gpt2" oninput="tokLabPaint()"> GPT-2 style (prebaked)</label>
+    </div>
     <label for="tok-input" style="font-size:12px;color:var(--muted)">Input text</label>
     <input id="tok-input" value="${escapeHtml(text)}" oninput="tokLabInput()" placeholder="type here...">
     <div id="tok-out" class="token-out"></div>
     <div id="tok-stat" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
-    <h4>Learned merges</h4>
-    <div id="tok-merges" style="font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)"></div>
+    <h4>Merges applied</h4>
+    <div id="tok-merges" style="font-family:ui-monospace,monospace;font-size:12px;color:var(--muted);max-height:120px;overflow-y:auto"></div>
   </div>
-  <div class="callout">Real-world: tokenization decides what model sees. Numbers, code, non-English often tokenize badly → math errors, language bias, cost differences.</div>`;
+  <div class="callout">Real tiktoken (GPT-4) has 100k+ merges trained on web-scale data. Same algorithm, vastly more learned merges. Try GPT-2 mode with longer English text to see how "ing", "tion", " the" become single tokens.</div>`;
 }
 
 /* --------------------- GAME: ATTENTION TOY --------------------- */
@@ -2364,7 +2607,7 @@ function copyPre(btn){
 }
 function submitMCQ(i, correctIdx){
   const sel = document.querySelector(`input[name="q${i}"]:checked`);
-  if(!sel){ alert("Pick an answer"); return; }
+  if(!sel){ xpPop("Pick an answer first"); return; }
   const choice = parseInt(sel.value);
   const ps = state.phases[COURSE[currentPhase].id];
   const wasCorrect = ps.quiz[i]?.correct;
@@ -2404,7 +2647,7 @@ function toggleCheck(i, checked){
   refreshBadges();
 }
 function markComplete(passed){
-  if(!passed){ alert("Score at least 70% on quiz first."); return; }
+  if(!passed){ xpPop("Score 70%+ on quiz first"); return; }
   const ps = state.phases[COURSE[currentPhase].id];
   if(ps.complete) return;
   ps.complete = true;
