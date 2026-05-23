@@ -572,9 +572,69 @@ CE = -log(0.99) ≈ 0.010  ← lower loss, better</code></pre>
   project:{title:"Phase 1 deliverable", steps:["phase1_linreg_scratch.py converges (w≈3,b≈2)","Math notes pushed","Can whiteboard backprop unaided"]}
 },
 { id:3, title:"Phase 2 — Python for ML", est:"~15 hrs",
-  intro:"numpy + pandas fluency. Replace every for-loop with vectorized ops.",
+  intro:"numpy + pandas fluency. The single biggest skill jump from beginner Python to ML Python is <b>vectorization</b> — replacing loops with array operations that run 100× faster on the same hardware.",
   lessons:[
-    {h:"numpy core", code:`import numpy as np\n# create\nnp.zeros((3,4)); np.ones(5); np.eye(4); np.random.randn(100,5)\nnp.arange(10); np.linspace(0,1,50)\n# shape\na.reshape(2,3); a[:,None]  # add axis\nnp.concatenate([a,b], axis=0)\n# math\na+b; a*b; np.exp(a); np.log(a); np.maximum(a,0)  # ReLU\n# reduce\na.mean(axis=0); a.std(axis=1, keepdims=True); a.argmax()\n# broadcasting: align right; size-1 stretches\nX - X.mean(axis=0)  # (100,5) - (5,)\n# mask\na[a>0]; a[a<0]=0\n# matmul (use @)\nA @ B`},
+    {h:"Why vectorize? (the most important Python ML skill)", body:`<p><b>Slow Python:</b></p>
+    <pre><code># Add 1 to each element of a million numbers
+result = []
+for x in numbers:        # explicit loop in Python
+    result.append(x + 1)
+# Takes ~0.5 seconds</code></pre>
+    <p><b>Fast numpy:</b></p>
+    <pre><code>result = numbers + 1     # vectorized
+# Takes ~0.005 seconds (100× faster)</code></pre>
+    <p><b>Why?</b> Python's <code>for</code> loop runs slow interpreted code per element. numpy ships the whole array to compiled C code that processes it in one batch, often using CPU SIMD instructions or GPU.</p>
+    <p><b>The rule:</b> if you write <code>for</code> over array elements, you're doing it wrong. Find the numpy operation that does the same thing on the whole array.</p>
+    <p><b>What "vectorized" means:</b> the operation applies element-wise without explicit loops. Math operators (+, -, *, /), functions (np.exp, np.log), comparisons (>, ==) all work on entire arrays at once.</p>`},
+    {h:"numpy core — what each operation does", body:`<p>Memorize these. They're the alphabet of ML code.</p>
+    <h4>Creating arrays</h4>
+    <pre><code>np.zeros((3, 4))      # 3x4 of zeros
+np.ones(5)            # length-5 of ones
+np.eye(4)             # 4x4 identity (1s on diagonal)
+np.random.randn(100, 5) # 100x5 random from N(0,1)
+np.arange(10)         # [0,1,2,...,9]
+np.linspace(0, 1, 50) # 50 evenly spaced from 0 to 1</code></pre>
+    <h4>Shape manipulation</h4>
+    <pre><code>a = np.arange(6)            # shape (6,)  → [0,1,2,3,4,5]
+a.reshape(2, 3)             # → [[0,1,2],[3,4,5]]
+a.reshape(-1, 2)            # -1 = "infer this dim" → (3,2)
+a[:, None]                  # add axis → (6,1) column vector
+np.concatenate([a, b], axis=0)  # stack along rows</code></pre>
+    <h4>Math (element-wise unless noted)</h4>
+    <pre><code>a + b        # element-wise add
+a * b        # element-wise multiply (NOT matmul)
+np.exp(a)    # e^x element-wise
+np.log(a)    # natural log
+np.maximum(a, 0)  # ReLU: max(x, 0) per element
+A @ B        # matrix multiplication</code></pre>
+    <h4>Reductions (collapse a dimension)</h4>
+    <pre><code>a.sum()            # one number (sum all)
+a.mean(axis=0)     # collapse axis 0 → average per column
+a.std(axis=1, keepdims=True)  # std per row, keep 2D shape
+a.argmax()         # index of max element</code></pre>
+    <h4>Masking (boolean indexing)</h4>
+    <pre><code>a[a > 0]           # keep only positive elements
+a[a < 0] = 0       # in-place ReLU</code></pre>`},
+    {h:"Broadcasting — the magic that powers everything", body:`<p><b>The problem:</b> you have an array X of shape (100, 5) — 100 samples, 5 features. You want to subtract the mean of each column. The mean has shape (5,). How can you compute (100, 5) - (5,)?</p>
+    <p><b>Answer: broadcasting.</b> numpy automatically stretches the smaller array to match.</p>
+    <p><b>The rules</b> (align shapes from the RIGHT):</p>
+    <ol>
+      <li>If one shape is shorter, pad the LEFT with 1s</li>
+      <li>For each dim: sizes must match, or one of them must be 1</li>
+      <li>Size-1 dims get "stretched" virtually (no memory copy)</li>
+    </ol>
+    <p><b>Worked example:</b></p>
+    <pre><code>X.shape       = (100, 5)
+mean.shape    = (5,)        → padded to (1, 5)
+                              → stretched to (100, 5)
+X - mean      → (100, 5)    ✓ works</code></pre>
+    <p><b>Common failure:</b></p>
+    <pre><code>X.shape  = (100, 5)
+v.shape  = (100,)           → (1, 100)
+                              → can't match 5 with 100
+X - v    → ERROR</code></pre>
+    <p>Fix: <code>X - v[:, None]</code> reshapes v to (100, 1) → broadcasts to (100, 5).</p>
+    <p><b>Why this is huge:</b> half the operations in deep learning rely on broadcasting. LayerNorm, attention masks, position encodings — all use it.</p>`},
     {h:"Stable softmax", code:`def softmax(x):\n    x = x - x.max(axis=-1, keepdims=True)  # stability\n    e = np.exp(x)\n    return e / e.sum(axis=-1, keepdims=True)`},
     {h:"pandas essentials", code:`import pandas as pd\ndf = pd.read_csv("train.csv")\ndf.head(); df.info(); df.describe()\ndf[df.age>30]                                # filter\ndf.groupby("class")["fare"].mean()           # groupby\ndf.merge(other, on="id", how="left")         # join\ndf["age"].fillna(df["age"].median())         # impute\npd.get_dummies(df, columns=["sex"])          # one-hot`},
     {h:"matplotlib", code:`import matplotlib.pyplot as plt\nfig, ax = plt.subplots(1, 2, figsize=(10,4))\nax[0].scatter(df.age, df.fare, alpha=0.4)\nax[1].hist(df.age.dropna(), bins=30)\nplt.tight_layout(); plt.show()`},
@@ -589,28 +649,53 @@ CE = -log(0.99) ≈ 0.010  ← lower loss, better</code></pre>
   project:{title:"Phase 2 deliverable", steps:["10 numpy drills solved","phase2_titanic_eda.ipynb with 5 insights","titanic_clean.csv"]}
 },
 { id:4, title:"Phase 3 — Classical ML", est:"~25 hrs",
-  intro:"LLM-only candidates fail interviews. Master bias-variance, regularization, trees, metrics.",
+  intro:"LLM-only candidates fail interviews. Classical ML teaches the patterns (overfit, regularization, evaluation) that show up in every deep learning project too.",
   lessons:[
+    {h:"What classical ML is and why you need it", body:`<p><b>Classical ML</b> = the algorithms before deep learning took over (~2012). Linear regression, decision trees, random forests, gradient boosting, k-nearest neighbors, SVMs.</p>
+    <p><b>Why still relevant in 2026:</b></p>
+    <ol>
+      <li><b>Tabular data still rules.</b> For CSVs with rows of numbers, XGBoost often beats deep learning. Hospital data, financial data, business KPIs — classical wins.</li>
+      <li><b>Interviews ask it.</b> Bias-variance, regularization, ROC curves are standard ML interview questions. LLM-only candidates fail.</li>
+      <li><b>Concepts transfer.</b> Overfitting, regularization, cross-validation, eval metrics — same concepts apply to LLMs.</li>
+      <li><b>Cheap baseline.</b> Always train a simple model first. Beats spending 3 weeks on a neural net that doesn't outperform.</li>
+    </ol>
+    <p>You don't need to master 20 algorithms. Master 5: linear regression, logistic regression, random forest, gradient boosting (XGBoost), and k-means. Plus eval discipline.</p>`},
     {h:"Supervised landscape", body:`<table>
-      <tr><th>Algo</th><th>Use</th><th>Notes</th></tr>
-      <tr><td>Linear regression</td><td>Continuous</td><td>OLS, GD. Assumes linearity.</td></tr>
-      <tr><td>Logistic regression</td><td>Binary</td><td>Sigmoid + CE.</td></tr>
-      <tr><td>Decision tree</td><td>Either</td><td>Overfits if deep.</td></tr>
-      <tr><td>Random forest</td><td>Either</td><td>Bagged trees. Strong baseline.</td></tr>
-      <tr><td>XGBoost / LightGBM</td><td>Either</td><td>SOTA tabular. Boost residuals.</td></tr>
-      <tr><td>k-NN</td><td>Either</td><td>Lazy. Slow predict.</td></tr>
+      <tr><th>Algorithm</th><th>Problem type</th><th>What it does (one line)</th></tr>
+      <tr><td>Linear regression</td><td>Continuous target</td><td>Fit a straight line/plane minimizing squared error.</td></tr>
+      <tr><td>Logistic regression</td><td>Binary classification</td><td>Linear regression + sigmoid output → probability.</td></tr>
+      <tr><td>Decision tree</td><td>Either</td><td>Series of if/else splits chosen to maximize information gain.</td></tr>
+      <tr><td>Random forest</td><td>Either</td><td>Many random trees voting. Reduces overfit via averaging.</td></tr>
+      <tr><td>XGBoost / LightGBM</td><td>Either</td><td>Trees grown sequentially, each fixing previous errors. SOTA tabular.</td></tr>
+      <tr><td>k-Nearest Neighbors</td><td>Either</td><td>Predict using k closest training points. No training, slow predict.</td></tr>
     </table>`},
-    {h:"Bias-variance — the most-tested concept", body:`<ul>
-      <li><b>High bias</b> (underfit): too simple. Fix: more features, deeper, less reg.</li>
-      <li><b>High variance</b> (overfit): memorizes train. Fix: more data, reg, simpler, bagging.</li>
-      <li>train_acc - val_acc gap tells you which.</li>
-    </ul>`},
-    {h:"Regularization", body:`<ul>
-      <li><b>L2 (Ridge)</b>: λΣw². Smooth, all-shrink.</li>
-      <li><b>L1 (Lasso)</b>: λΣ|w|. Sparse → feature selection.</li>
-      <li><b>Dropout</b> (NN): zero activations randomly during training.</li>
-      <li><b>Early stopping</b>: stop when val rises. Cheapest.</li>
-    </ul>`},
+    {h:"Bias-variance — why models fail (the most-tested ML concept)", body:`<p><b>Two ways a model can be wrong:</b></p>
+    <ul>
+      <li><b>High bias</b> = "model too simple" → underfits. Picture: trying to fit a sine wave with a straight line.</li>
+      <li><b>High variance</b> = "model too sensitive to training data" → memorizes noise. Picture: a wiggly curve hitting every training point but failing on new data.</li>
+    </ul>
+    <p><b>Diagnose by comparing train vs val accuracy:</b></p>
+    <table>
+      <tr><th>train acc</th><th>val acc</th><th>diagnosis</th><th>fix</th></tr>
+      <tr><td>60%</td><td>60%</td><td>High bias (underfit)</td><td>More features, deeper model, train longer, less regularization</td></tr>
+      <tr><td>99%</td><td>70%</td><td>High variance (overfit)</td><td>More data, regularization, simpler model, dropout</td></tr>
+      <tr><td>85%</td><td>83%</td><td>Just right (small gap)</td><td>Ship or tune more carefully</td></tr>
+      <tr><td>60%</td><td>30%</td><td>Bug — val worse than train shouldn't happen this badly</td><td>Data leakage? Distribution shift? Bad split?</td></tr>
+    </table>
+    <p><b>Total error decomposition:</b> <code>error = bias² + variance + irreducible_noise</code>. You can trade bias for variance but not eliminate both.</p>`},
+    {h:"Regularization — fighting overfitting", body:`<p><b>The setup:</b> overfit models have huge weight magnitudes that perfectly thread the training data. Regularization penalizes those huge weights, forcing simpler solutions.</p>
+    <h4>L2 (Ridge)</h4>
+    <p>Add <code>λ · Σ wᵢ²</code> to the loss. Larger weights cost more. Result: all weights shrink toward 0 smoothly.</p>
+    <p>Geometric picture: solution must lie inside a circle.</p>
+    <h4>L1 (Lasso)</h4>
+    <p>Add <code>λ · Σ |wᵢ|</code> to the loss. Same idea but absolute value instead of square.</p>
+    <p>Geometric picture: solution must lie inside a diamond → optimum often lies on a corner → some weights become exactly 0 → automatic feature selection.</p>
+    <p><b>L1 vs L2 cheat:</b> L1 if you want sparse models (only some features matter). L2 if you want smooth shrinkage of all features.</p>
+    <h4>Dropout (neural networks)</h4>
+    <p>During training, randomly set p fraction of activations to 0 (e.g., p=0.1-0.5). Forces the network to not rely on any single neuron — like training many networks at once.</p>
+    <p>Turn OFF at inference (model.eval() in PyTorch).</p>
+    <h4>Early stopping</h4>
+    <p>Watch validation loss. When it starts rising while train loss falls, stop training. Saves compute and is a form of regularization.</p>`},
     {h:"Metrics", body:`<table>
       <tr><td>Accuracy</td><td>(TP+TN)/N. Bad on imbalance.</td></tr>
       <tr><td>Precision</td><td>TP/(TP+FP)</td></tr>
@@ -723,22 +808,52 @@ W ← W - α·v</code></pre>
   project:{title:"Phase 4 deliverable", steps:["micrograd (~200 lines) pushed","MNIST MLP >97%","CIFAR-10 CNN >85%"]}
 },
 { id:6, title:"Phase 5 — NLP Fundamentals", est:"~15 hrs",
-  intro:"Tokens, embeddings, why RNNs died. Brief but critical.",
+  intro:"Tokens, embeddings, why RNNs died. Brief but critical — these concepts underpin every LLM.",
   lessons:[
-    {h:"Tokenization", body:`<ul>
-      <li><b>Char</b>: tiny vocab, long seqs</li>
-      <li><b>Word</b>: huge vocab, OOV problem</li>
-      <li><b>BPE</b>: bytes → merge frequent pairs. GPT-2/3/4 standard.</li>
-      <li><b>SentencePiece / WordPiece</b>: variants. BERT uses WordPiece.</li>
-    </ul>
-    <div class="callout">Bad tokenization = bad math, bad multilingual. GPT-4 ~100k vocab.</div>`},
+    {h:"The fundamental problem: text → numbers", body:`<p>Neural networks only handle numbers. Text is symbols. How do we bridge that gap?</p>
+    <p><b>Two-step pipeline every LLM uses:</b></p>
+    <ol>
+      <li><b>Tokenize</b>: split text into pieces ("tokens"), assign each piece an integer ID</li>
+      <li><b>Embed</b>: look up each ID in a table of learned vectors</li>
+    </ol>
+    <p>The output is a sequence of vectors. Now the transformer can do math on it.</p>
+    <p><b>Why this matters:</b> the choice of tokenizer affects EVERYTHING downstream — vocab size, sequence length, cost, multilingual quality, even how well the model does arithmetic. It's not a throwaway preprocessing step.</p>`},
+    {h:"Tokenization strategies", body:`<table>
+      <tr><th>Strategy</th><th>How it works</th><th>Vocab size</th><th>Problems</th></tr>
+      <tr><td>Character-level</td><td>Each char = one token</td><td>~100</td><td>Sequences become very long. Model can't learn word-level patterns easily.</td></tr>
+      <tr><td>Word-level</td><td>Each whitespace-split word = one token</td><td>~1M</td><td>Out-of-vocabulary (OOV) words break. Bad for compound words, new slang.</td></tr>
+      <tr><td>Subword (BPE)</td><td>Learn frequent byte/char pairs, merge into tokens</td><td>~30k-200k</td><td>Sweet spot. Used by GPT-2/3/4, Llama.</td></tr>
+      <tr><td>WordPiece</td><td>BPE variant, slightly different merge criterion</td><td>~30k</td><td>Used by BERT, original Google models.</td></tr>
+      <tr><td>SentencePiece</td><td>Language-agnostic BPE on raw bytes, treats whitespace as character</td><td>~32k-256k</td><td>Multilingual standard. Used by Llama, T5.</td></tr>
+    </table>
+    <div class="callout"><b>Why subword wins:</b> common words like "the" are single tokens (cheap). Rare words like "antidisestablishmentarianism" decompose into pieces ("anti", "dis", "establish", "ment", "arian", "ism") — model never sees OOV. Best of both worlds.</div>`},
     {h:"BPE algorithm", body:`<ol>
       <li>Vocab = all bytes (256)</li>
       <li>Count adjacent pairs</li>
       <li>Merge most frequent → new token</li>
       <li>Repeat to target vocab size</li>
     </ol>`, code:`def get_stats(ids):\n    counts = {}\n    for a,b in zip(ids, ids[1:]):\n        counts[(a,b)] = counts.get((a,b), 0) + 1\n    return counts\n\ndef merge(ids, pair, new_id):\n    out, i = [], 0\n    while i < len(ids):\n        if i < len(ids)-1 and ids[i]==pair[0] and ids[i+1]==pair[1]:\n            out.append(new_id); i += 2\n        else:\n            out.append(ids[i]); i += 1\n    return out\n\ntext = "the cat sat on the mat"\nids = list(text.encode("utf-8"))\nfor new_id in range(256, 270):\n    stats = get_stats(ids)\n    if not stats: break\n    pair = max(stats, key=stats.get)\n    ids = merge(ids, pair, new_id)`},
-    {h:"Embeddings", body:"<p>Lookup table vocab_size × d_model. Token ID → dense vector. Trained jointly with model.</p>", code:`emb = nn.Embedding(50257, 768)  # GPT-2 small\nx = emb(torch.tensor([[1, 42, 99]]))   # (1, 3, 768)`},
+    {h:"Embeddings — turning IDs into meaning vectors", body:`<p><b>An embedding table is just a big lookup matrix</b> of shape <code>(vocab_size, d_model)</code>. Each row is the learned vector representation of one token.</p>
+    <p><b>Example:</b> GPT-2 small has vocab=50257, d_model=768. Embedding table = 50257 × 768 ≈ 38M parameters. Token ID 42 → row 42 of this table → a 768-dim vector.</p>
+    <p><b>Why a vector?</b> Because vectors can encode rich meaning. Similar words end up with similar vectors after training. Famous example from word2vec:</p>
+    <pre><code>king - man + woman ≈ queen</code></pre>
+    <p>The embedding table learns linear relationships in concept space.</p>
+    <p><b>How is the table learned?</b> Backprop. Every time the model sees "the cat sat" and predicts the next token, gradients flow back to update the rows for "the", "cat", "sat" — making similar tokens have similar embeddings.</p>
+    <p><b>In LLMs vs older models:</b></p>
+    <ul>
+      <li>Static embeddings (word2vec, GloVe): one vector per word, fixed regardless of context</li>
+      <li>Contextual embeddings (BERT, GPT): vectors change based on surrounding tokens — "bank" near "river" ≠ "bank" near "money"</li>
+    </ul>`, code:`import torch.nn as nn
+import torch
+
+emb = nn.Embedding(50257, 768)  # GPT-2 small vocab + dim
+
+# input: token IDs
+ids = torch.tensor([[1, 42, 99]])  # batch=1, seq=3
+
+# output: looked-up vectors
+x = emb(ids)
+print(x.shape)  # torch.Size([1, 3, 768])`},
     {h:"Why RNNs died", body:`<ul>
       <li>RNN: sequential, can't parallelize</li>
       <li>LSTM/GRU: gated, still bottlenecked</li>
@@ -864,22 +979,39 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   project:{title:"Phase 6 deliverable", steps:["nanoGPT from scratch on Tiny Shakespeare","Add RoPE","Add KV cache, benchmark speedup"]}
 },
 { id:8, title:"Phase 7 — Pretrain Small LLM", est:"~40 hrs",
-  intro:"Reproduce GPT-2 (or smaller). Real training run on real corpus.",
+  intro:"Reproduce GPT-2 (or smaller). This is the phase that converts you from \"reads about LLMs\" to \"trains LLMs\". Karpathy has reproduced GPT-2 124M for ~$10 of cloud compute — you can too.",
   lessons:[
-    {h:"Dataset prep", body:`<ul>
-      <li><b>FineWeb / FineWeb-Edu</b>: filtered Common Crawl 15T+ tokens (use slice)</li>
-      <li><b>Tiny</b>: OpenWebText, WikiText-103</li>
-      <li>Tokenize with tiktoken (GPT-2 BPE)</li>
-      <li>Pack into uint16 token shards for fast streaming</li>
-    </ul>`},
-    {h:"Training loop", body:"<p><b>bf16 NEEDS NO GradScaler</b> (range = fp32). GradScaler is only for fp16. Two clean variants:</p>", code:`# Variant A — bf16 (preferred on A100/H100, no scaler needed)\nopt = torch.optim.AdamW(model.parameters(), lr=peak_lr, betas=(0.9, 0.95), weight_decay=0.1)\naccum = 8\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.bfloat16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        loss.backward()\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    opt.step()\n    schedule_lr(opt, step)\n\n# Variant B — fp16 (older GPUs, V100/T4). Needs GradScaler.\nscaler = torch.amp.GradScaler("cuda")\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.float16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        scaler.scale(loss).backward()\n    scaler.unscale_(opt)\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    scaler.step(opt); scaler.update()`},
-    {h:"Scaling laws (Chinchilla)", body:`<p>Compute C ≈ 6·N·D for transformers (N params, D tokens).</p>
+    {h:"What pretraining actually is", body:`<p><b>Pretraining</b> = take a freshly initialized transformer (random weights), feed it billions of web tokens, and train it to predict the next token. After enough data + compute, you get a model that "knows things" — language, facts, basic reasoning.</p>
+    <p><b>The objective is dumb:</b> just minimize cross-entropy on next-token prediction. No labels, no human supervision. The "intelligence" emerges from the model trying to compress patterns in the data.</p>
+    <p><b>Why this works:</b> to predict next tokens well, the model has to learn grammar, world facts, math, code patterns — everything. Predicting next-word in "The capital of France is ___" requires knowing world facts.</p>
+    <p><b>What you get after pretraining = a "base model".</b> Useful but not chatty. To make it follow instructions, you need Phase 8 (fine-tuning).</p>`},
+    {h:"Dataset preparation", body:`<p><b>Common pretraining datasets:</b></p>
     <ul>
-      <li>Optimal: N and D scale together. ~20 tokens/param.</li>
-      <li>GPT-3 undertrained (175B params, 300B tokens)</li>
-      <li>Llama-2 70B trained 2T tokens — closer to optimal</li>
-      <li>Modern (Llama 3+): train far past Chinchilla because inference cost dominates lifetime</li>
-    </ul>`},
+      <li><b>FineWeb / FineWeb-Edu</b> (HuggingFace) — filtered Common Crawl, 15T+ tokens. Modern standard. Use a slice (e.g., 10B tokens).</li>
+      <li><b>The Pile</b> — 800GB diverse text. Legal grey area now.</li>
+      <li><b>Tiny options for learning</b>: OpenWebText (40GB), WikiText-103 (500MB), TinyShakespeare (1MB for sanity checks).</li>
+    </ul>
+    <p><b>Steps to prep:</b></p>
+    <ol>
+      <li>Download text (HuggingFace datasets library)</li>
+      <li>Tokenize with tiktoken (GPT-2 BPE) — converts text → uint16 token IDs</li>
+      <li>Concatenate all tokens into one big binary file (shards if huge)</li>
+      <li>At training time, memory-map the file and randomly sample sequences</li>
+    </ol>
+    <p><b>Why binary uint16:</b> tokens are integers 0-50256 → fits in 2 bytes. Memory-mapping = OS streams from disk efficiently → can train on data way bigger than RAM.</p>`},
+    {h:"Training loop", body:"<p><b>bf16 NEEDS NO GradScaler</b> (range = fp32). GradScaler is only for fp16. Two clean variants:</p>", code:`# Variant A — bf16 (preferred on A100/H100, no scaler needed)\nopt = torch.optim.AdamW(model.parameters(), lr=peak_lr, betas=(0.9, 0.95), weight_decay=0.1)\naccum = 8\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.bfloat16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        loss.backward()\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    opt.step()\n    schedule_lr(opt, step)\n\n# Variant B — fp16 (older GPUs, V100/T4). Needs GradScaler.\nscaler = torch.amp.GradScaler("cuda")\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.float16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        scaler.scale(loss).backward()\n    scaler.unscale_(opt)\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    scaler.step(opt); scaler.update()`},
+    {h:"Scaling laws — how much data does a model need?", body:`<p><b>Compute cost</b> for transformer training: <code>C ≈ 6 · N · D</code> FLOPS, where N = parameters and D = training tokens. (6 = ~2 fwd + ~4 bwd per param per token.)</p>
+    <p><b>The big question:</b> if you have a fixed compute budget, should you train a bigger model on less data, or a smaller model on more data?</p>
+    <p><b>Chinchilla answer (DeepMind 2022):</b> for compute-optimal, scale N and D proportionally. About <b>20 tokens per parameter</b>.</p>
+    <table>
+      <tr><th>Model</th><th>Params</th><th>Training tokens</th><th>Tokens/param</th><th>Verdict</th></tr>
+      <tr><td>GPT-3</td><td>175B</td><td>300B</td><td>~1.7</td><td>Massively undertrained</td></tr>
+      <tr><td>Chinchilla</td><td>70B</td><td>1.4T</td><td>20</td><td>Compute-optimal (the paper's recommendation)</td></tr>
+      <tr><td>Llama-2 70B</td><td>70B</td><td>2T</td><td>~29</td><td>Slightly past optimal</td></tr>
+      <tr><td>Llama-3 8B</td><td>8B</td><td>15T</td><td>~1875</td><td>Way past Chinchilla on purpose</td></tr>
+    </table>
+    <p><b>Why modern LLMs train way past Chinchilla:</b> Chinchilla optimizes for cheapest training. But you train once and serve forever — a smaller, more-trained model is cheaper to run. So companies overshoot data on small models.</p>
+    <p><b>For your own training:</b> shoot for 20+ tokens/param. Below that = waste of compute.</p>`},
     {h:"Eval", body:`<ul>
       <li>Perplexity on held-out val</li>
       <li>HellaSwag, MMLU, GSM8K</li>
@@ -902,14 +1034,38 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   project:{title:"Phase 7 deliverable", steps:["10M-124M GPT-2 reproduction on FineWeb","Loss curves on W&B","HF Hub model card","HellaSwag eval"]}
 },
 { id:9, title:"Phase 8 — Fine-tuning + Alignment", est:"~30 hrs",
-  intro:"SFT → preference tuning. LoRA = cheap. DPO replaced PPO.",
+  intro:"Pretrained base models aren't useful out of the box — they continue prompts but don't follow instructions or refuse harmful requests. Fine-tuning + alignment turns base models into ChatGPT/Claude-style assistants.",
   lessons:[
-    {h:"SFT", body:`<p>Cross-entropy on response tokens only (mask instruction prefix).</p>
+    {h:"The three stages of making an assistant", body:`<p><b>Pretraining</b> (Phase 7) gives you a model that completes text. Ask it "How do I bake bread?" and it might respond "is a common question. Here are 10 other things people ask:". Not useful.</p>
+    <p><b>Three more stages turn it into an assistant:</b></p>
+    <ol>
+      <li><b>SFT</b> (Supervised Fine-Tuning): show it examples of (instruction → good response) pairs. Teaches it the chat format.</li>
+      <li><b>RLHF or DPO</b> (preference tuning): show it pairs of (better response, worse response). Teaches it to prefer helpful, honest, harmless answers.</li>
+      <li><b>Optional: Constitutional AI</b> (Anthropic): use AI feedback guided by written principles instead of (or alongside) human feedback. Scales cheaper.</li>
+    </ol>
+    <p>Each stage uses way less compute than pretraining. SFT a 1B model on consumer GPU = 1 hour. Pretraining same model from scratch = weeks.</p>`},
+    {h:"SFT — supervised fine-tuning", body:`<p><b>The data:</b> (instruction, response) pairs. Examples:</p>
+    <pre><code>{
+  "instruction": "Translate 'Hello' to French",
+  "response": "Bonjour"
+}</code></pre>
+    <p><b>The loss:</b> cross-entropy on next-token prediction, but <b>only over the response tokens</b>. We don't want the model learning to generate instructions; we want it to generate good responses given them.</p>
+    <p><b>Datasets to know:</b></p>
     <ul>
-      <li>Datasets: Alpaca, UltraChat, OpenHermes, HH-RLHF (Anthropic), Tulu</li>
-      <li>LR ~10× smaller than pretrain. 1-3 epochs.</li>
+      <li><b>Alpaca</b> (52k) — Stanford, generated by GPT-3.5. Classic but quality-mixed.</li>
+      <li><b>UltraChat / OpenHermes / Tulu</b> — modern, larger, higher quality</li>
+      <li><b>HH-RLHF</b> (Anthropic) — helpful/harmless preferences</li>
+      <li><b>Your own</b> — for domain-specific tuning, curate 200-2000 high-quality examples</li>
+    </ul>
+    <p><b>Hyperparameters:</b></p>
+    <ul>
+      <li>LR ~10× smaller than pretrain (e.g. 2e-5 instead of 3e-4) — base model is already trained, just nudging</li>
+      <li>1-3 epochs (more often overfits the small dataset)</li>
+      <li>Use the model's expected chat template — Llama-3 uses <code>&lt;|begin_of_text|&gt;...&lt;|eot_id|&gt;</code>; getting this wrong silently breaks training</li>
     </ul>`},
-    {h:"LoRA", body:`<p>Freeze base W. Add low-rank update:</p>
+    {h:"LoRA — why low-rank updates work", body:`<p><b>The problem with full fine-tuning:</b> a 7B model has 14GB of fp16 weights. Plus you need gradients (14GB), optimizer state (28GB for Adam). Total: ~56GB just for one model. Doesn't fit on consumer GPU.</p>
+    <p><b>The insight (Hu et al. 2021):</b> fine-tuning changes weights, but the CHANGE is approximately low-rank — it lives in a small subspace. So instead of training a full weight delta ΔW (huge), train a low-rank factorization B·A (tiny).</p>
+    <p>Freeze base W. Add low-rank update:</p>
     <span class="formula">W' = W + (α/r)·B·A     where B∈ℝ^{d×r}, A∈ℝ^{r×k}, r ≪ d</span>
     <ul>
       <li><b>α/r scaling</b> is non-negotiable — without /r, doubling rank effectively doubles LR. People miss this and get bad results.</li>
@@ -1065,23 +1221,50 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   project:{title:"Phase 9 deliverable", steps:["CLI tool with tool use (file r/w, run cmd)","Discord/Slack bot powered by Claude","Eval harness with golden set"]}
 },
 { id:11, title:"Phase 10 — RAG Systems", est:"~20 hrs",
-  intro:"Give LLMs your data.",
+  intro:"LLMs only know what's in their training data, frozen at some past date. They don't know your company's docs, today's news, or your private notes. RAG (Retrieval-Augmented Generation) fixes this by fetching relevant info at query time and injecting it into the prompt.",
   lessons:[
-    {h:"Pipeline", body:`<ol>
-      <li>Ingest: docs → text → chunks</li>
-      <li>Embed: chunk → vector (Voyage, Cohere, OpenAI)</li>
-      <li>Store: Qdrant, pgvector, Pinecone</li>
-      <li>Retrieve: query → embed → top-k</li>
-      <li>Augment: chunks in prompt</li>
-      <li>Generate: Claude answers with context</li>
-    </ol>`},
-    {h:"Chunking", body:`<ul>
-      <li>Fixed-size (e.g. 500 tok, 50 overlap) — usually fine</li>
-      <li>Recursive: split \\n\\n → \\n → sentence → word</li>
-      <li>Semantic: topic boundaries</li>
-      <li>Structural: respect headings, code blocks, tables</li>
-      <li>Include metadata: source, page, section</li>
-    </ul>`},
+    {h:"What RAG is and why it beats fine-tuning for most cases", body:`<p><b>Two ways to give an LLM new knowledge:</b></p>
+    <ol>
+      <li><b>Fine-tune</b>: bake the knowledge into model weights via training</li>
+      <li><b>RAG</b>: keep the model frozen, look up relevant docs at query time, insert them into the prompt</li>
+    </ol>
+    <p><b>RAG wins when:</b></p>
+    <ul>
+      <li>Knowledge changes often (you don't want to re-train weekly)</li>
+      <li>Need source citations ("according to doc X...")</li>
+      <li>Knowledge is private/confidential (can encrypt at rest)</li>
+      <li>You have lots of docs but each query only needs a few</li>
+    </ul>
+    <p><b>Fine-tune wins when:</b></p>
+    <ul>
+      <li>Teaching a behavior/style (tone, format) not facts</li>
+      <li>Knowledge is stable and small enough to fit in weights</li>
+      <li>Latency-critical (retrieval adds 100-500ms)</li>
+    </ul>
+    <p>Most production AI apps use RAG + sometimes fine-tune on top.</p>`},
+    {h:"The RAG pipeline (6 steps)", body:`<ol>
+      <li><b>Ingest</b>: load source docs (PDFs, web pages, Notion, code) and extract clean text</li>
+      <li><b>Chunk</b>: split each doc into pieces small enough to fit in prompt context (e.g., 500-token chunks)</li>
+      <li><b>Embed</b>: turn each chunk into a vector using an embedding model (Voyage, Cohere, OpenAI)</li>
+      <li><b>Store</b>: save vectors + chunk text in a vector database (Qdrant, pgvector, Pinecone)</li>
+      <li><b>Retrieve</b>: when user asks a question, embed the question, find top-k most similar chunks via vector search</li>
+      <li><b>Generate</b>: paste the retrieved chunks into Claude's prompt as context, generate answer</li>
+    </ol>
+    <p><b>Steps 1-4 happen once</b> at ingestion. <b>Steps 5-6 happen per query</b>.</p>`},
+    {h:"Chunking — why this is the make-or-break step", body:`<p><b>The dilemma:</b></p>
+    <ul>
+      <li>Chunks too small (50 tokens) → each chunk loses context. Splits "The customer churned because of..." across chunks.</li>
+      <li>Chunks too large (4000 tokens) → retrieval fetches mostly irrelevant text. Wastes context window. Embeddings become "averages" of many topics → less precise.</li>
+    </ul>
+    <p><b>Sweet spot:</b> 200-800 tokens, with 50-100 token overlap between consecutive chunks.</p>
+    <h4>Chunking strategies (in order of sophistication)</h4>
+    <ul>
+      <li><b>Fixed-size</b>: every N tokens. Simple, usually fine. Use for plain text.</li>
+      <li><b>Recursive</b>: try splitting on paragraph breaks; if too big, sentence; if still too big, word. Preserves natural boundaries.</li>
+      <li><b>Semantic</b>: use embeddings to find topic boundaries. Slower, occasionally better.</li>
+      <li><b>Structural</b>: respect markdown headings, code blocks, tables. Critical for technical docs — never split a function in half.</li>
+    </ul>
+    <p><b>Always attach metadata</b> to each chunk: source URL, doc title, page number, section heading. Lets you cite sources back to the user.</p>`},
     {h:"Hybrid + reranker", body:`<ul>
       <li>Vector alone misses keywords (proper nouns, codes)</li>
       <li>BM25 sparse catches them</li>
@@ -1108,13 +1291,27 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   project:{title:"Phase 10 deliverable", steps:["RAG over your PDFs, deployed","Contextual retrieval, measure recall@5 lift","Hybrid + reranker"]}
 },
 { id:12, title:"Phase 11 — AI Agents", est:"~30 hrs",
-  intro:"Agent = LLM + tools + loop + memory. Build raw with Claude first, then frameworks.",
+  intro:"An <b>agent</b> = LLM + tools + a loop where the LLM decides what to do next based on previous results. This is where AI stops being a chatbot and starts being a worker.",
   lessons:[
-    {h:"What an agent is", body:`<p>Loop: LLM proposes tool call → execute → feed result → LLM proposes next → final answer.</p>
+    {h:"What an agent actually is (vs hype)", body:`<p>"Agent" is overused. Concrete definition: <b>an LLM in a loop where, at each step, the model can call tools, get back results, and decide what to do next — until it produces a final answer.</b></p>
+    <p><b>The minimal loop:</b></p>
+    <ol>
+      <li>User gives a task: "Find the latest version of Python and write a hello world"</li>
+      <li>LLM emits a tool call: <code>web_search("latest Python version")</code></li>
+      <li>You execute the tool, get back: "Python 3.13"</li>
+      <li>LLM emits another tool call: <code>write_file("hello.py", "print('hi')")</code></li>
+      <li>You execute, return success</li>
+      <li>LLM emits <code>end_turn</code> with: "Done. Latest is 3.13, file written."</li>
+    </ol>
+    <p>That's it. No magic. The LLM is the planner; your code is the executor.</p>
+    <p><b>When you need an agent (vs a single LLM call):</b></p>
     <ul>
-      <li>Read Anthropic <a href="https://www.anthropic.com/research/building-effective-agents" target="_blank">Building Effective Agents</a></li>
-      <li>Patterns: routing, parallelization, orchestrator-workers, evaluator-optimizer</li>
-    </ul>`},
+      <li>The task requires multiple steps with unknown ordering</li>
+      <li>Each step's output determines the next step</li>
+      <li>External info (web, files, APIs) needed at runtime</li>
+    </ul>
+    <p><b>When you DON'T need one:</b> simple Q&A, single classification, fixed multi-step pipeline. Don't agentify what one prompt + maybe one tool call can do.</p>
+    <div class="callout">Required reading: Anthropic's <a href="https://www.anthropic.com/research/building-effective-agents" target="_blank">Building Effective Agents</a>. Defines core patterns (routing, parallelization, orchestrator-workers, evaluator-optimizer).</div>`},
     {h:"Raw agent loop (SAFE — no shell=True)", body:`<div class="callout warn"><b>SECURITY:</b> never pass model output to <code>shell=True</code>. Use <code>shlex.split</code> + allowlist, or sandbox (Docker, Modal). Below: read-only filesystem + allowlisted commands.</div>`, code:`import anthropic, subprocess, shlex, pathlib\nclient = anthropic.Anthropic()\n\nALLOWED_CMDS = {"ls", "cat", "wc", "grep", "head", "tail", "python", "pytest"}\nSAFE_ROOT = pathlib.Path("./workspace").resolve()\n\nTOOLS = [\n    {"name":"read_file","description":"Read a file under ./workspace",\n     "input_schema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}},\n    {"name":"run","description":"Run an allowlisted command (no shell). Args as list.",\n     "input_schema":{"type":"object","properties":{"argv":{"type":"array","items":{"type":"string"}}},"required":["argv"]}},\n]\n\ndef safe_path(p):\n    full = (SAFE_ROOT / p).resolve()\n    if SAFE_ROOT not in full.parents and full != SAFE_ROOT:\n        raise ValueError("path escapes workspace")\n    return full\n\ndef exec_tool(name, args):\n    try:\n        if name == "read_file":\n            return safe_path(args["path"]).read_text()[:8000]\n        if name == "run":\n            argv = args["argv"]\n            if not argv or argv[0] not in ALLOWED_CMDS:\n                return f"command not allowed: {argv[:1]}"\n            r = subprocess.run(argv, capture_output=True, text=True, timeout=15, cwd=SAFE_ROOT)\n            return (r.stdout + r.stderr)[:4000]\n        return f"unknown tool {name}"\n    except Exception as e:\n        return f"tool error: {e}"\n\ndef run_agent(task, max_steps=10, max_dollars=0.50):\n    messages = [{"role":"user","content":task}]\n    spent = 0.0; seen = set()\n    for step in range(max_steps):\n        resp = client.messages.create(\n            model="claude-opus-4-7", max_tokens=4096,\n            tools=TOOLS, messages=messages,\n        )\n        # cost cap (Opus 4.7 illustrative; verify pricing live)\n        spent += resp.usage.input_tokens*15e-6 + resp.usage.output_tokens*75e-6\n        if spent > max_dollars: return f"cost cap hit at step {step}"\n        messages.append({"role":"assistant","content":resp.content})\n        if resp.stop_reason == "end_turn":\n            return next((b.text for b in resp.content if b.type=="text"), "")\n        tool_results = []\n        for b in resp.content:\n            if b.type == "tool_use":\n                sig = (b.name, repr(b.input))\n                if sig in seen:\n                    tool_results.append({"type":"tool_result","tool_use_id":b.id,\n                                         "content":"You already called this. Try a different approach."})\n                else:\n                    seen.add(sig)\n                    tool_results.append({"type":"tool_result","tool_use_id":b.id,\n                                         "content":exec_tool(b.name, b.input)})\n        messages.append({"role":"user","content":tool_results})\n    return "max steps reached"`},
     {h:"Claude Agent SDK", body:`<p>Anthropic's official agent SDK — production loop, tool exec, parallel, observability. Docs at <a href="https://docs.anthropic.com/" target="_blank">docs.anthropic.com</a>.</p>`},
     {h:"Patterns", body:`<table>
@@ -1149,14 +1346,41 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   project:{title:"Phase 11 deliverable", steps:["Research agent: topic → report","Code review agent on PR diff","Observability dashboard"]}
 },
 { id:13, title:"Phase 12 — MLOps / AI Engineering", est:"~30 hrs",
-  intro:"Notebooks don't pay rent. Deploy, monitor, scale.",
+  intro:"Notebooks don't pay rent. This phase turns your prototypes into deployed services that real users hit — with auth, monitoring, security, and cost control.",
   lessons:[
-    {h:"Serving open LLMs", body:`<table>
-      <tr><td>vLLM</td><td>SOTA throughput, PagedAttention, continuous batching</td></tr>
-      <tr><td>TGI</td><td>HF production stack</td></tr>
-      <tr><td>Ollama</td><td>Local single-user, GGUF, easy</td></tr>
-      <tr><td>llama.cpp</td><td>CPU/edge</td></tr>
-    </table>`, code:`pip install vllm\npython -m vllm.entrypoints.openai.api_server \\\n  --model meta-llama/Llama-3.1-8B-Instruct \\\n  --dtype bfloat16 --max-model-len 8192 --port 8000`},
+    {h:"What MLOps actually means for AI engineers", body:`<p><b>MLOps = the operations side of ML</b> — taking a trained model and making it a reliable service.</p>
+    <p><b>What you need to know:</b></p>
+    <ol>
+      <li><b>Serving</b>: how to run your model behind an API at high throughput</li>
+      <li><b>Wrapping</b>: REST API, auth, rate limits, error handling</li>
+      <li><b>Containers</b>: Docker so it runs anywhere</li>
+      <li><b>Deployment</b>: cloud platforms (Fly.io, Railway, Modal, Cloud Run) or your own infra</li>
+      <li><b>Monitoring</b>: logs, metrics (latency, error rate, cost), alerts</li>
+      <li><b>Security</b>: prompt injection defense, PII handling, secret management</li>
+    </ol>
+    <p>You're not expected to become a DevOps expert. Master enough to ship one service end-to-end. The skills generalize.</p>`},
+    {h:"Serving open LLMs — choose the right tool", body:`<p>If you're using Claude API, you don't need to "serve" anything — Anthropic runs the model. If you're deploying an open model (Llama, Qwen, Mistral) on your own GPU, you need a serving framework:</p>
+    <table>
+      <tr><th>Tool</th><th>Use case</th><th>Why</th></tr>
+      <tr><td><b>vLLM</b></td><td>Production high-throughput</td><td>PagedAttention + continuous batching → ~5-20× throughput vs naive HF generate. OpenAI-compatible API. Default for serving 7B+ models.</td></tr>
+      <tr><td><b>TGI</b></td><td>Production HF stack</td><td>HuggingFace's official server. Mature, similar perf to vLLM.</td></tr>
+      <tr><td><b>Ollama</b></td><td>Local single-user dev</td><td>Easy install, runs quantized models. One-command setup. Not for prod.</td></tr>
+      <tr><td><b>llama.cpp</b></td><td>CPU / edge devices</td><td>Pure C++, runs on Raspberry Pi, phones. GGUF quantized weights.</td></tr>
+    </table>
+    <p><b>What makes vLLM fast:</b></p>
+    <ul>
+      <li><b>Continuous batching</b>: instead of waiting for a fixed batch to fill, vLLM packs new requests into the running batch every step. GPU stays at near 100% utilization.</li>
+      <li><b>PagedAttention</b>: KV cache is allocated in pages (like virtual memory), not contiguously. Allows variable-length sequences without wasted memory.</li>
+    </ul>`, code:`pip install vllm
+
+python -m vllm.entrypoints.openai.api_server \\
+  --model meta-llama/Llama-3.1-8B-Instruct \\
+  --dtype bfloat16 \\
+  --max-model-len 8192 \\
+  --port 8000
+
+# Then call as if it were OpenAI:
+# curl http://localhost:8000/v1/chat/completions ...`},
     {h:"FastAPI wrapper", code:`from fastapi import FastAPI, HTTPException, Header\nfrom pydantic import BaseModel\nimport anthropic, os\nfrom slowapi import Limiter\nfrom slowapi.util import get_remote_address\n\napp = FastAPI()\nlimiter = Limiter(key_func=get_remote_address)\nclient = anthropic.Anthropic()\nKEYS = set(os.getenv("APP_KEYS","").split(","))\n\nclass Q(BaseModel): question: str\n\n@app.post("/ask")\n@limiter.limit("30/minute")\nasync def ask(q: Q, request, x_api_key: str = Header(None)):\n    if x_api_key not in KEYS: raise HTTPException(401, "bad key")\n    resp = client.messages.create(model="claude-sonnet-4-6", max_tokens=1024,\n        messages=[{"role":"user","content":q.question}])\n    return {"answer":resp.content[0].text, "tokens":resp.usage.output_tokens}`},
     {h:"Dockerfile", code:`FROM python:3.11-slim\nWORKDIR /app\nCOPY requirements.txt .\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nCMD ["uvicorn","app:app","--host","0.0.0.0","--port","8080"]`},
     {h:"Observability", body:`<ul>
