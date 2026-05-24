@@ -1133,7 +1133,76 @@ W ← W - α·v</code></pre>
       <li><b>LayerNorm</b>: across feature dim per sample. <b>Transformer standard</b>.</li>
       <li><b>RMSNorm</b>: cheaper LayerNorm. Llama, modern LLMs.</li>
     </ul>`},
-    {h:"PyTorch minimum viable model", code:`import torch, torch.nn as nn, torch.nn.functional as F\nfrom torch.utils.data import DataLoader, TensorDataset\n\ndevice = "cuda" if torch.cuda.is_available() else "cpu"\n\nclass MLP(nn.Module):\n    def __init__(self, in_d, hid, out_d):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(in_d, hid), nn.GELU(),\n            nn.Linear(hid, hid), nn.GELU(),\n            nn.Linear(hid, out_d),\n        )\n    def forward(self, x): return self.net(x)\n\nX = torch.randn(1000, 20); y = torch.randint(0, 5, (1000,))\nloader = DataLoader(TensorDataset(X, y), batch_size=64, shuffle=True)\nmodel = MLP(20, 128, 5).to(device)\nopt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)\n\nfor epoch in range(10):\n    for xb, yb in loader:\n        xb, yb = xb.to(device), yb.to(device)\n        logits = model(xb)\n        loss = F.cross_entropy(logits, yb)\n        opt.zero_grad(); loss.backward(); opt.step()\n    print(f"epoch {epoch} loss {loss.item():.4f}")`},
+    {h:"PyTorch minimum viable model — every line explained", body:`<p><b>Why run this:</b> minimal but COMPLETE pattern for training any neural net in PyTorch. Synthetic data + 3-layer MLP + AdamW + cross-entropy. Memorize this shape — you'll reuse it for every subsequent project.</p>
+    <p><b>How to run:</b></p>
+    <pre><code>uv pip install torch
+python mlp_demo.py
+# Expect: 10 epoch lines with decreasing loss. Random data → loss approaches but
+# never reaches 0 because labels are random.</code></pre>
+    <p><b>What each block does:</b></p>
+    <ol>
+      <li><b>Imports + device.</b> <code>nn</code> for layers, <code>F</code> for stateless functions like <code>cross_entropy</code>. <code>device</code> auto-picks GPU if available.</li>
+      <li><b>MLP class.</b> <code>nn.Module</code> = base class for all PyTorch models. <code>__init__</code> registers learnable layers. <code>forward</code> defines how input flows through them.</li>
+      <li><b>nn.Sequential.</b> Convenience container: layers run in order. <code>Linear(a,b)</code> = matmul + bias from <code>a</code>-dim to <code>b</code>-dim. <code>GELU</code> = smooth nonlinearity.</li>
+      <li><b>Synthetic data.</b> 1000 samples, 20 features, 5 classes. Random — only here to demonstrate the loop.</li>
+      <li><b>DataLoader.</b> Wraps <code>TensorDataset</code>, gives mini-batches. <code>shuffle=True</code> randomizes order each epoch.</li>
+      <li><b>Optimizer.</b> AdamW = transformer default. <code>lr=3e-4</code> = Karpathy's "constant for small models". <code>weight_decay</code> = L2-style regularization.</li>
+      <li><b>Training loop.</b> Inner loop = one optimizer step per batch. Same 5 lines for EVERY PyTorch training, period.</li>
+    </ol>`, code:`import torch
+import torch.nn as nn                          # layers + Module base
+import torch.nn.functional as F                # stateless math (loss fns, activations)
+from torch.utils.data import DataLoader, TensorDataset
+
+# auto-pick fastest device
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# ---- model definition ----
+class MLP(nn.Module):                          # inherit from Module → param tracking + .to() + .train()/.eval()
+    def __init__(self, in_d, hid, out_d):
+        super().__init__()                     # MUST call: registers _parameters dict
+        self.net = nn.Sequential(              # layers run in order
+            nn.Linear(in_d, hid),              # matmul (in_d→hid) + bias. Learnable.
+            nn.GELU(),                         # nonlinearity. Without this, stack collapses to one linear.
+            nn.Linear(hid, hid),               # second hidden layer (depth helps)
+            nn.GELU(),
+            nn.Linear(hid, out_d),             # output layer: hid→num_classes. No softmax here — CrossEntropyLoss adds it.
+        )
+    def forward(self, x):                      # called by model(x). PyTorch sets up autograd graph.
+        return self.net(x)
+
+# ---- fake data ----
+X = torch.randn(1000, 20)                      # 1000 samples, 20 features each (continuous)
+y = torch.randint(0, 5, (1000,))               # 1000 integer class labels in [0..4]
+
+# DataLoader batches + shuffles each epoch
+loader = DataLoader(TensorDataset(X, y), batch_size=64, shuffle=True)
+
+# ---- instantiate + move to GPU ----
+model = MLP(in_d=20, hid=128, out_d=5).to(device)
+
+# AdamW: adaptive LR per param + decoupled weight decay. Standard for NN.
+opt = torch.optim.AdamW(
+    model.parameters(),                        # all learnable tensors (auto-collected from nn.Module)
+    lr=3e-4,                                   # learning rate; tune ±10× and watch loss
+    weight_decay=0.01,                         # L2-style regularization (penalizes large weights)
+)
+
+# ---- training loop (memorize this shape) ----
+for epoch in range(10):
+    for xb, yb in loader:                      # mini-batches of (batch_size, 20) and (batch_size,)
+        xb, yb = xb.to(device), yb.to(device)  # ship batch to GPU
+
+        # FORWARD
+        logits = model(xb)                     # raw scores, shape (batch, 5)
+        loss = F.cross_entropy(logits, yb)     # combines log_softmax + NLL in one (numerically stable)
+
+        # BACKWARD + UPDATE (3 critical lines)
+        opt.zero_grad()                        # clear stale grads. PyTorch ACCUMULATES by default — forgetting = bug.
+        loss.backward()                        # autograd: chain-rule backward through every layer
+        opt.step()                             # apply update: w -= lr * grad (with AdamW adaptations)
+
+    print(f"epoch {epoch} loss {loss.item():.4f}")
+    # .item() pulls scalar tensor → Python float (only for printing/logging)`},
     {h:"Karpathy Zero-to-Hero (mandatory) — full companion guide", body:`<div class="callout warn"><b>Hard rule:</b> never just watch. Open VS Code beside the video, pause every 60s, type along, run the cell. If you can't reproduce the cell without peeking, rewatch that segment.</div>
     <h4>Video 1 — Building micrograd (~2.5 hrs)</h4>
     <p><a href="https://www.youtube.com/watch?v=VMj-3S1tku0" target="_blank">youtube.com/watch?v=VMj-3S1tku0</a></p>
@@ -1335,7 +1404,60 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
     <p><b>Causal mask (decoder-only LLMs like GPT):</b> set scores for future positions to <code>-inf</code> before softmax. After softmax they become 0 → no leakage of future info. This is what lets GPT learn to predict next token.</p>`},
     {h:"Self-attention", body:`<p>The above is <b>self-attention</b>: Q, K, V all come from the same sequence. Tokens attend to other tokens in their own context.</p>
     <p>(Encoder-decoder models like T5 also use cross-attention where Q comes from decoder, K and V from encoder. We focus on decoder-only.)</p>`},
-    {h:"Multi-head attention", body:"<p>Run h attentions in parallel with different projections. Concat. Lets model attend to different relationships simultaneously.</p>", code:`class MHA(nn.Module):\n    def __init__(self, d_model, n_heads):\n        super().__init__()\n        assert d_model % n_heads == 0\n        self.d_h = d_model // n_heads; self.h = n_heads\n        self.qkv = nn.Linear(d_model, 3*d_model, bias=False)\n        self.proj = nn.Linear(d_model, d_model)\n    def forward(self, x, mask=None):\n        B, T, C = x.shape\n        qkv = self.qkv(x).reshape(B, T, 3, self.h, self.d_h)\n        q, k, v = qkv.unbind(dim=2)\n        q, k, v = [t.transpose(1,2) for t in (q,k,v)]\n        att = (q @ k.transpose(-2,-1)) / (self.d_h ** 0.5)\n        if mask is not None:\n            att = att.masked_fill(mask==0, float('-inf'))\n        att = F.softmax(att, dim=-1)\n        out = (att @ v).transpose(1,2).reshape(B, T, C)\n        return self.proj(out)`},
+    {h:"Multi-head attention — every line explained", body:`<p><b>What it does:</b> runs <code>h</code> attention operations in parallel with different learned projections, then concatenates. Lets the model attend to different relationships simultaneously (one head for syntax, one for coreference, etc.).</p>
+    <p><b>Why one combined QKV projection (not three):</b> efficiency. One matmul of size <code>(d_model, 3*d_model)</code> beats three matmuls. Split into Q/K/V via reshape afterward.</p>
+    <p><b>Shape tracking through the forward pass (the hard part):</b></p>
+    <pre><code>x:              (B, T, C)         # batch, tokens, channels
+qkv (after lin) (B, T, 3*C)       # concat of Q,K,V
+.reshape:       (B, T, 3, h, d_h) # split into 3 heads and per-head dim
+unbind dim=2:   3× (B, T, h, d_h)
+transpose 1↔2:  (B, h, T, d_h)    # heads become a batch dimension
+Q @ K^T:        (B, h, T, T)      # similarity matrix per head
+softmax dim=-1: (B, h, T, T)      # row-wise probabilities
+@ V:            (B, h, T, d_h)
+transpose:      (B, T, h, d_h)
+reshape:        (B, T, C)         # concat heads back
+proj:           (B, T, C)         # final mixing</code></pre>`, code:`class MHA(nn.Module):
+    def __init__(self, d_model, n_heads):
+        super().__init__()
+        # d_model must split evenly across heads (e.g., 768 / 12 = 64)
+        assert d_model % n_heads == 0
+        self.d_h = d_model // n_heads          # per-head dimension
+        self.h = n_heads
+
+        # ONE big linear that outputs Q, K, V concatenated.
+        # bias=False is a common LLM choice (Llama, GPT-NeoX) — slight quality win.
+        self.qkv = nn.Linear(d_model, 3 * d_model, bias=False)
+
+        # output projection: mixes information back across heads after attention
+        self.proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x, mask=None):
+        B, T, C = x.shape                      # batch, time (tokens), channels
+
+        # project to Q, K, V in one shot
+        qkv = self.qkv(x).reshape(B, T, 3, self.h, self.d_h)
+        q, k, v = qkv.unbind(dim=2)            # each is (B, T, h, d_h)
+
+        # bring heads next to batch so we can matmul per-head in parallel
+        q, k, v = [t.transpose(1, 2) for t in (q, k, v)]   # (B, h, T, d_h)
+
+        # SCALED DOT-PRODUCT attention
+        # q @ k^T → (B, h, T, T) similarity matrix
+        # divide by sqrt(d_h): stabilizes softmax (Var(q·k) grows with d_h)
+        att = (q @ k.transpose(-2, -1)) / (self.d_h ** 0.5)
+
+        # Causal mask: 1s below/on diagonal, 0s above. Set 0s to -inf
+        # so softmax assigns them probability 0 → token can't see future.
+        if mask is not None:
+            att = att.masked_fill(mask == 0, float('-inf'))
+
+        att = F.softmax(att, dim=-1)           # row-wise: each query distributes attention
+
+        # weighted sum of values, then concat heads back into channel dim
+        out = (att @ v).transpose(1, 2).reshape(B, T, C)
+
+        return self.proj(out)                  # mix across heads → output of attention sublayer`},
     {h:"Causal mask + positional encoding", body:`<ul>
       <li><b>Causal mask</b>: lower-tri, -inf future positions before softmax. Decoder-only LLMs.</li>
       <li><b>Sinusoidal</b> (orig): fixed sin/cos different freqs</li>
@@ -1439,7 +1561,72 @@ python train.py config/train_shakespeare_char.py \\
       <li>At training time, memory-map the file and randomly sample sequences</li>
     </ol>
     <p><b>Why binary uint16:</b> tokens are integers 0-50256 → fits in 2 bytes. Memory-mapping = OS streams from disk efficiently → can train on data way bigger than RAM.</p>`},
-    {h:"Training loop", body:"<p><b>bf16 NEEDS NO GradScaler</b> (range = fp32). GradScaler is only for fp16. Two clean variants:</p>", code:`# Variant A — bf16 (preferred on A100/H100, no scaler needed)\nopt = torch.optim.AdamW(model.parameters(), lr=peak_lr, betas=(0.9, 0.95), weight_decay=0.1)\naccum = 8\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.bfloat16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        loss.backward()\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    opt.step()\n    schedule_lr(opt, step)\n\n# Variant B — fp16 (older GPUs, V100/T4). Needs GradScaler.\nscaler = torch.amp.GradScaler("cuda")\nfor step in range(total_steps):\n    opt.zero_grad()\n    for _ in range(accum):\n        xb, yb = next(loader)\n        with torch.amp.autocast("cuda", dtype=torch.float16):\n            logits, loss = model(xb, yb)\n            loss = loss / accum\n        scaler.scale(loss).backward()\n    scaler.unscale_(opt)\n    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)\n    scaler.step(opt); scaler.update()`},
+    {h:"Training loop — annotated (bf16 + grad accum + clipping)", body:`<p><b>What this loop does:</b> trains an LLM at scale by combining 4 critical tricks:</p>
+    <ol>
+      <li><b>Mixed precision (bf16/fp16)</b> — half the memory, ~2× speed on modern GPUs</li>
+      <li><b>Gradient accumulation</b> — simulate huge batch on small GPU by summing grads over micro-batches</li>
+      <li><b>Gradient clipping</b> — caps gradient norm, prevents NaN explosions from outlier batches</li>
+      <li><b>LR schedule</b> — warmup + cosine decay (separate function — drives stability)</li>
+    </ol>
+    <p><b>Why TWO variants:</b></p>
+    <ul>
+      <li><b>bf16</b> (Brain Float 16) has same exponent range as fp32 → no overflow → NO scaler needed. Default on A100/H100/RTX 30+.</li>
+      <li><b>fp16</b> has narrower exponent range → overflow risk in attention → needs <code>GradScaler</code> to scale loss up before backward. Required on V100/T4 (older GPUs).</li>
+    </ul>
+    <div class="callout warn"><b>Common bug:</b> using GradScaler with bf16. It's a no-op-but-confusing pattern. Only use GradScaler with fp16.</div>
+    <p><b>How to run:</b> needs a real <code>model</code>, <code>loader</code>, <code>schedule_lr</code> function and a GPU. This is the pattern Karpathy uses in <a href="https://www.youtube.com/watch?v=l8pRSuU81PU" target="_blank">"Let's reproduce GPT-2 (124M)"</a>. Phase 7 LITE shows the local-CPU version first.</p>`, code:`# ====== Variant A: bf16 (preferred on A100/H100/RTX 30+) ======
+opt = torch.optim.AdamW(
+    model.parameters(),
+    lr=peak_lr,                                # set by your schedule_lr each step
+    betas=(0.9, 0.95),                         # β2=0.95 is LLM-standard (lower than default 0.999)
+    weight_decay=0.1,                          # heavier than typical 0.01 — LLM standard
+)
+accum = 8                                      # accumulate grads over 8 micro-batches before stepping
+                                               # → effective batch = micro_batch × 8
+
+for step in range(total_steps):
+    opt.zero_grad()                            # clear stale grads BEFORE inner loop
+
+    # micro-batch loop: accumulate gradients without stepping
+    for _ in range(accum):
+        xb, yb = next(loader)                  # one micro-batch from your data iterator
+
+        # bf16 autocast: forward + loss compute in bf16, backward grads in fp32
+        with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+            logits, loss = model(xb, yb)       # model returns both for convenience
+            loss = loss / accum                # divide so total accumulated grad = mean
+
+        loss.backward()                        # autograd. Grads ACCUMULATE in .grad of each param.
+
+    # gradient clipping: cap global norm to 1.0 → prevents single-batch NaN spikes
+    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+
+    opt.step()                                 # apply update using accumulated grads
+
+    schedule_lr(opt, step)                     # warmup + cosine decay (your custom fn)
+
+
+# ====== Variant B: fp16 (older GPUs, V100/T4). Needs GradScaler. ======
+# GradScaler multiplies loss by a large factor BEFORE backward so small fp16
+# gradients don't underflow to zero. Then unscales before step.
+
+scaler = torch.amp.GradScaler("cuda")          # auto-tunes scale factor over training
+
+for step in range(total_steps):
+    opt.zero_grad()
+    for _ in range(accum):
+        xb, yb = next(loader)
+        with torch.amp.autocast("cuda", dtype=torch.float16):
+            logits, loss = model(xb, yb)
+            loss = loss / accum
+
+        scaler.scale(loss).backward()          # backward on SCALED loss → grads also scaled up
+
+    scaler.unscale_(opt)                       # divide grads by the scale factor BEFORE clipping
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+
+    scaler.step(opt)                           # if no inf/NaN grads, applies update; else skips
+    scaler.update()                            # adapt scale factor for next iteration`},
     {h:"⚠️ Misconceptions to kill before reading further", body:`<div class="trap">
       <div class="wrong">❌ WRONG: "Bigger model = always better."</div>
       <div class="right">✅ RIGHT: At fixed compute, model size and data should grow TOGETHER. A 70B model trained on 100B tokens is worse than a 7B model trained on 1.4T tokens. See Chinchilla, next lesson.</div>
