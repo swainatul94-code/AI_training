@@ -141,6 +141,22 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 .kpi .v{font-size:26px;font-weight:700;color:var(--accent)}
 .kpi .l{font-size:11px;color:var(--muted);margin-top:4px}
 @media(max-width:900px){.body{grid-template-columns:1fr}aside{position:relative;height:auto;top:0}main{padding:18px}header.topbar{padding:8px}header .xp-bar{order:5;width:100%;flex:none}.match-board{grid-template-columns:1fr}.portfolio-row{grid-template-columns:1fr;gap:4px}.flash-card .opts{grid-template-columns:1fr}}
+/* inline interactives */
+details.try{background:rgba(255,209,102,.07);border:1px solid var(--gold);border-radius:8px;padding:10px 14px;margin:10px 0}
+details.try summary{cursor:pointer;font-weight:600;color:var(--gold);outline:none}
+details.try summary:hover{color:#ffe28a}
+details.try[open] summary{margin-bottom:8px}
+details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1px solid var(--border);color:var(--ink);font-size:13px;margin-top:6px}
+.tryq{background:rgba(122,162,255,.06);border-left:4px solid var(--accent);padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0}
+.tryq b{color:var(--accent)}
+.mistake{background:rgba(255,107,107,.06);border-left:4px solid var(--err);padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0}
+.mistake b{color:var(--err)}
+.interview{background:rgba(157,122,255,.06);border-left:4px solid var(--accent2);padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0}
+.interview b{color:var(--accent2)}
+.minilab{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:14px;margin:10px 0}
+.minilab label{display:block;margin:6px 0;font-size:13px}
+.minilab input[type=number]{background:var(--code);border:1px solid var(--border);color:var(--ink);padding:6px;border-radius:4px;width:90px}
+.minilab .out{margin-top:10px;padding:10px;background:var(--code);border-radius:6px;border:1px solid var(--border);font-family:ui-monospace,monospace;font-size:13px}
 </style>
 </head>
 <body>
@@ -193,7 +209,7 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 <script>
 /* ============================== COURSE DATA ============================== */
 const COURSE = [
-{ id:0, title:"Phase 0 — Setup", est:"~5 hrs",
+{ id:0, title:"Phase 0 — Setup", est:"1-2 hrs",
   intro:"Bad env kills learning. By end: Python, Claude API key, GitHub repo, working <code>test_claude.py</code>. Don't skip the explanations — they teach concepts you'll be quizzed on.",
   lessons:[
     {h:"What you're installing and why (read first)", body:`<p>Five tools. Each has a job:</p>
@@ -341,7 +357,7 @@ git push -u origin main
   ],
   project:{title:"Phase 0 deliverable", steps:["test_claude.py prints response","git push to AI_training succeeds","README written"]}
 },
-{ id:1, title:"Phase 0.5 — Coding for Testers", est:"~10 hrs",
+{ id:1, title:"Phase 0.5 — Python Basics", est:"8-15 hrs",
   intro:"This phase teaches Python basics. Everything explained from scratch, no prior coding assumed. Skim ONLY if you can read all the code below at a glance and want to skip.",
   lessons:[
     {h:"Optional QA → Python analogies (skip if not from QA background)", body:`<p>If you've done QA testing before, these analogies may help. If not, skip — every term below is taught from scratch in the following lessons.</p>
@@ -421,7 +437,7 @@ def test_add_param(a, b, expected):
   ],
   project:{title:"Phase 0.5 deliverable", steps:["Write 5 pytest tests for a small Python module","Create a class with constructor + 3 methods","Push to AI_training repo under /python_basics/"]}
 },
-{ id:2, title:"Phase 1 — Math Foundations", est:"~30 hrs",
+{ id:2, title:"Phase 1 — Math Foundations", est:"25-40 hrs",
   intro:"Can't debug LLMs without linear algebra + gradients + probability. Skip = stuck at Phase 6. This phase uses analogies + numeric examples; don't memorize formulas, build intuition.",
   lessons:[
     {h:"Vectors — what they are and why ML uses them", body:`<p><b>A vector is two things at once:</b></p>
@@ -442,7 +458,8 @@ def test_add_param(a, b, expected):
 cat_B = [25, 4]   # long tail, light
 cat_C = [11, 9]   # short tail, heavy (like cat_A)</code></pre>
     <p>Vectors cat_A and cat_C "point in similar directions" → similar cats. cat_B is different. We'll measure that with dot product in 2 lessons.</p>`},
-    {h:"Matrices and matrix multiplication", body:`<p><b>A matrix is a grid of numbers</b>, e.g. shape (rows, cols):</p>
+    {h:"Matrices and matrix multiplication", body:`<details class="try"><summary>🎯 Try first: what shape does (3,4) @ (4,7) produce?</summary><div class="ans">Answer: <b>(3, 7)</b>. Inner dims (4 and 4) must match and cancel. Outer dims (3 and 7) survive.</div></details>
+    <p><b>A matrix is a grid of numbers</b>, e.g. shape (rows, cols):</p>
     <pre><code>A = [[1, 2, 3],
      [4, 5, 6]]    # shape (2, 3)</code></pre>
     <p><b>Geometric meaning:</b> a matrix is a <b>linear transformation</b> — multiplying by it rotates, scales, or shears space.</p>
@@ -470,7 +487,8 @@ B = np.array([[5, 6], [7, 8]])
 print(A @ B)     # matrix multiply → [[19,22],[43,50]]
 print(A * B)     # element-wise   → [[5,12],[21,32]]
 print(A.T)       # transpose      → [[1,3],[2,4]]`},
-    {h:"Dot product — measuring similarity", body:`<p>The dot product of two vectors <code>a · b = a[0]*b[0] + a[1]*b[1] + ...</code> (sum element-wise products).</p>
+    {h:"Dot product — measuring similarity", body:`<details class="try"><summary>🎯 Try first: a=[1,0], b=[0,1]. What is a·b?</summary><div class="ans">Answer: <b>0</b>. Element-wise: 1·0 + 0·1 = 0. Geometrically these are perpendicular (90°), so cos(90°)=0 confirms it.</div></details>
+    <p>The dot product of two vectors <code>a · b = a[0]*b[0] + a[1]*b[1] + ...</code> (sum element-wise products).</p>
     <p><b>Geometric meaning:</b> <code>a · b = |a| · |b| · cos(θ)</code> where θ is the angle between them.</p>
     <ul>
       <li>θ = 0° (same direction): cos = 1 → max similarity</li>
@@ -529,7 +547,8 @@ print("eigenvalues:", vals)
 
 U, S, Vt = np.linalg.svd(A)
 print("singular values:", S)    # important values; small ones can be dropped`},
-    {h:"Derivatives — the slope of a function", body:`<p><b>What a derivative is:</b> the slope of a function at a specific point. If <code>f(x) = x²</code>, then <code>f'(x) = 2x</code> — at x=3, slope is 6.</p>
+    {h:"Derivatives — the slope of a function", body:`<details class="try"><summary>🎯 Try first: f(x) = 5x. What's the slope?</summary><div class="ans">Answer: <b>5</b>. A straight line of slope 5 has derivative = 5 everywhere. (Rule: derivative of c·x is c.)</div></details>
+    <p><b>What a derivative is:</b> the slope of a function at a specific point. If <code>f(x) = x²</code>, then <code>f'(x) = 2x</code> — at x=3, slope is 6.</p>
     <p><b>Why ML cares:</b> we have a <b>loss function</b> measuring how wrong the model is. We want to find parameter values where the loss is minimum. Derivatives tell us which direction (and how much) to move parameters to reduce loss.</p>
     <p><b>Picture:</b> imagine you're on a hill in fog. You want to reach the bottom. Feel the ground around your feet → walk in the steepest-down direction → repeat. That's gradient descent.</p>
     <p><b>The rules you actually need:</b></p>
@@ -552,7 +571,8 @@ f(x) = g(x) + h(x)→ f'(x) = g'(x) + h'(x)  (sum)</code></pre>
     <p><b>Gradient</b> <code>∇f</code> = vector of all partial derivatives. For our example: <code>∇f = [2x + 3y, 3x + 3y²]</code>.</p>
     <p><b>Geometric meaning:</b> ∇f points in the direction of steepest <b>ascent</b>. So to minimize, step in the opposite direction: <code>x_new = x_old - α · ∇f(x_old)</code>. α is the learning rate.</p>
     <p><b>In a neural net with 1B parameters:</b> ∇L is a 1B-dimensional vector. Each entry says "to decrease loss, nudge this param by this much." That's training in one line.</p>`},
-    {h:"Chain rule — the heart of backprop", body:`<p>When a function is built by composing other functions, the chain rule tells you how to take its derivative:</p>
+    {h:"Chain rule — the heart of backprop", body:`<details class="try"><summary>🎯 Try first: f(x) = (3x)². What is f'(x)?</summary><div class="ans">Answer: <b>18x</b>. Let g(x) = 3x (inner), outer = squared. f'(x) = 2·g(x)·g'(x) = 2·(3x)·3 = 18x.</div></details>
+    <p>When a function is built by composing other functions, the chain rule tells you how to take its derivative:</p>
     <span class="formula">d/dx f(g(x)) = f'(g(x)) · g'(x)</span>
     <p><b>Plain English:</b> outer derivative (evaluated at inner) <b>times</b> inner derivative.</p>
     <p><b>Worked example.</b> <code>f(x) = sin(x²)</code>. Let <code>g(x) = x²</code>, outer is sin. Then:</p>
@@ -584,7 +604,8 @@ Die: E[X] = 1·(1/6) + 2·(1/6) + ... + 6·(1/6) = 3.5</code></pre>
 = 0.0099 / 0.0198
 = 0.5  (50%!)</code></pre>
     <p>Intuition: false positives from the 99% of healthy people swamp the true positives from the 1% who are sick.</p>`},
-    {h:"Entropy, cross-entropy, KL — the LLM loss function", body:`<p>Three info-theory quantities. Memorize what each means.</p>
+    {h:"Entropy, cross-entropy, KL — the LLM loss function", body:`<details class="try"><summary>🎯 Try first: model says cat=0.9, dog=0.1. True label is cat. Cross-entropy?</summary><div class="ans">Answer: <b>-log(0.9) ≈ 0.105</b>. Only the true class contributes: -1·log(p_cat). If model said cat=0.5, loss would be -log(0.5)≈0.69, much worse.</div></details>
+    <p>Three info-theory quantities. Memorize what each means.</p>
     <h4>Entropy H(p)</h4>
     <p>"How much uncertainty does this distribution have?"</p>
     <span class="formula">H(p) = -Σ p(x) · log p(x)</span>
@@ -629,7 +650,7 @@ CE = -log(0.99) ≈ 0.010  ← lower loss, better</code></pre>
   ],
   project:{title:"Phase 1 deliverable", steps:["phase1_linreg_scratch.py converges (w≈3,b≈2)","Math notes pushed","Can whiteboard backprop unaided"]}
 },
-{ id:3, title:"Phase 2 — Python for ML", est:"~15 hrs",
+{ id:3, title:"Phase 2 — Python for ML", est:"12-20 hrs",
   intro:"numpy + pandas fluency. The single biggest skill jump from beginner Python to ML Python is <b>vectorization</b> — replacing loops with array operations that run 100× faster on the same hardware.",
   lessons:[
     {h:"Why vectorize? (the most important Python ML skill)", body:`<p><b>Slow Python:</b></p>
@@ -706,7 +727,7 @@ X - v    → ERROR</code></pre>
   ],
   project:{title:"Phase 2 deliverable", steps:["10 numpy drills solved","phase2_titanic_eda.ipynb with 5 insights","titanic_clean.csv"]}
 },
-{ id:4, title:"Phase 3 — Classical ML", est:"~25 hrs",
+{ id:4, title:"Phase 3 — Classical ML", est:"20-30 hrs",
   intro:"LLM-only candidates fail interviews. Classical ML teaches the patterns (overfit, regularization, evaluation) that show up in every deep learning project too.",
   lessons:[
     {h:"What classical ML is and why you need it", body:`<p><b>Classical ML</b> = the algorithms before deep learning took over (~2012). Linear regression, decision trees, random forests, gradient boosting, k-nearest neighbors, SVMs.</p>
@@ -773,7 +794,7 @@ X - v    → ERROR</code></pre>
   ],
   project:{title:"Phase 3 deliverable", steps:["Linreg from scratch (numpy)","Kaggle House Prices submission, top 30%","Writeup: which model won and why"]}
 },
-{ id:5, title:"Phase 4 — Deep Learning + PyTorch", est:"~40 hrs",
+{ id:5, title:"Phase 4 — Deep Learning + PyTorch", est:"35-50 hrs",
   intro:"Karpathy's <i>Neural Networks: Zero to Hero</i> is mandatory. Code along, don't just watch.",
   lessons:[
     {h:"What a neural network IS (in plain English)", body:`<p><b>A neural network is a function.</b> Input goes in, output comes out. The "neural" part just means the function is built by stacking simple math operations (matmul + nonlinearity).</p>
@@ -782,7 +803,8 @@ X - v    → ERROR</code></pre>
     <span class="formula">y = σ(w · x + b)</span>
     <p>Mental model: it's a linear regression with a nonlinear twist at the end.</p>
     <p><b>Why the nonlinearity?</b> Without σ, stacking 100 linear layers = still one linear function. Useless. The σ (ReLU, GELU, sigmoid) bends the function so stacking gives you expressive power.</p>`},
-    {h:"By-hand 2-neuron example", body:`<p>Let's compute one forward pass of a tiny network: 2 inputs → 1 hidden layer with 2 neurons → 1 output.</p>
+    {h:"By-hand 2-neuron example", body:`<details class="try"><summary>🎯 Try first: input x=2, weight w=3, bias b=1, ReLU activation. Output?</summary><div class="ans">Answer: <b>7</b>. Linear part: 3·2 + 1 = 7. ReLU(max(0, 7)) = 7. If x had been -3: 3·(-3)+1 = -8, ReLU → 0.</div></details>
+    <p>Let's compute one forward pass of a tiny network: 2 inputs → 1 hidden layer with 2 neurons → 1 output.</p>
     <pre><code>x = [0.5, -1.0]              # input (2 numbers)
 
 # Layer 1: 2 inputs → 2 neurons
@@ -854,6 +876,13 @@ W ← W - α·v</code></pre>
       <li>makemore parts 1-5</li>
       <li><a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank">Let's build GPT</a></li>
     </ol><div class="callout warn">Pause every 60s. Type yourself. No just watching.</div>`},
+    {h:"Common mistakes + interview prep", body:`<div class="mistake"><b>Mistake #1:</b> forgetting <code>opt.zero_grad()</code> at start of each step → grads accumulate from previous step → wrong updates → loss explodes or doesn't converge.</div>
+    <div class="mistake"><b>Mistake #2:</b> not calling <code>model.eval()</code> during validation → dropout still active + BN uses batch stats → noisy/wrong val numbers. Always pair with <code>with torch.no_grad():</code> for speed.</div>
+    <div class="mistake"><b>Mistake #3:</b> using <code>GradScaler</code> with bf16. Scaler is fp16-only. With bf16 just use <code>autocast(dtype=torch.bfloat16)</code> and skip the scaler.</div>
+    <div class="mistake"><b>Mistake #4:</b> LR too high → loss → NaN. LR too low → flat line. Always start with 3e-4 (AdamW small models) then sweep ±10×.</div>
+    <div class="interview"><b>Interview Q:</b> "Why AdamW over Adam for transformers?" → Adam scales weight decay by adaptive LR, weakening regularization on big-grad params. AdamW applies decay separately. Standard for LLMs.</div>
+    <div class="interview"><b>Interview Q:</b> "Vanishing gradients — cause + remedies?" → Sigmoid σ' max 0.25 → product of L sigmoids → 0. Remedies: ReLU/GELU (no squash), residual connections (preserve gradient flow), LayerNorm (control activation scale), better init (Xavier/He).</div>
+    <div class="interview"><b>Interview Q:</b> "LayerNorm vs BatchNorm — why transformers use LayerNorm?" → BN batch statistics noisy for variable-length sequences and small batches. LN per-sample stats → robust.</div>`},
   ],
   quiz:[
     {type:"mcq", q:"AdamW over Adam for transformers because:", options:["Faster","Decouples weight decay from grad update — fixes Adam bug","No GPU","Same"], answer:1, explain:"In Adam, L2 reg gets scaled by adaptive LR → ineffective. AdamW applies decay separately. LLM standard."},
@@ -865,7 +894,7 @@ W ← W - α·v</code></pre>
   ],
   project:{title:"Phase 4 deliverable", steps:["micrograd (~200 lines) pushed","MNIST MLP >97%","CIFAR-10 CNN >85%"]}
 },
-{ id:6, title:"Phase 5 — NLP Fundamentals", est:"~15 hrs",
+{ id:6, title:"Phase 5 — NLP Fundamentals", est:"12-18 hrs",
   intro:"Tokens, embeddings, why RNNs died. Brief but critical — these concepts underpin every LLM.",
   lessons:[
     {h:"The fundamental problem: text → numbers", body:`<p>Neural networks only handle numbers. Text is symbols. How do we bridge that gap?</p>
@@ -929,7 +958,7 @@ print(x.shape)  # torch.Size([1, 3, 768])`},
   ],
   project:{title:"Phase 5 deliverable", steps:["BPE tokenizer encode/decode roundtrip","Char-level RNN on Tiny Shakespeare (historical literacy)"]}
 },
-{ id:7, title:"Phase 6 — Transformers From Scratch", est:"~40 hrs",
+{ id:7, title:"Phase 6 — Transformers From Scratch", est:"40-60 hrs",
   intro:"Heart of course. Don't move past until you can rebuild nanoGPT blindfolded. We'll walk a 3-token toy example by hand before jumping into code.",
   lessons:[
     {h:"The problem attention solves", body:`<p><b>Problem:</b> in a sentence "<i>The cat that lived next door sat on the mat</i>", what does "sat" refer to? Answer: <b>cat</b>. But "cat" is 6 words back. How can the model carry that information forward?</p>
@@ -950,7 +979,9 @@ print(x.shape)  # torch.Size([1, 3, 768])`},
       <li>You compare your Q to each K, find best matches, fetch their V</li>
     </ul>
     <p><b>Why three?</b> Tokens advertise themselves (K) differently from what they actually mean (V). And the question (Q) is different from both. Separating them gives the model flexibility.</p>`},
-    {h:"Self-attention walkthrough by hand (3 tokens, d=2)", body:`<p>Let's compute attention for 3 tokens with embedding dim d=2. Real models use d=64+ per head, but the math is identical.</p>
+    {h:"Self-attention walkthrough by hand (3 tokens, d=2)", body:`<details class="try"><summary>🎯 Try first: token A scores [2, 5, 1] against [K_A, K_B, K_C]. After softmax (no scaling), which token gets most attention?</summary><div class="ans">Answer: <b>token B</b>. Softmax preserves order: highest score → highest weight. Weights ≈ [0.05, 0.93, 0.02].</div></details>
+    <div class="mistake"><b>Common mistake:</b> forgetting to divide scores by √d_k. Without scaling, large d_k makes softmax saturate → vanishing gradients on losing positions.</div>
+    <p>Let's compute attention for 3 tokens with embedding dim d=2. Real models use d=64+ per head, but the math is identical.</p>
     <pre><code>tokens: ["The", "cat", "sat"]
 
 # After Q, K, V projections (skip the W matrices for clarity):
@@ -1017,6 +1048,40 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
     </ul>`},
     {h:"Full block + GPT", code:`class Block(nn.Module):\n    def __init__(self, d, h):\n        super().__init__()\n        self.ln1 = nn.LayerNorm(d); self.attn = MHA(d, h)\n        self.ln2 = nn.LayerNorm(d)\n        self.ffn = nn.Sequential(nn.Linear(d, 4*d), nn.GELU(), nn.Linear(4*d, d))\n    def forward(self, x, mask):\n        x = x + self.attn(self.ln1(x), mask)\n        x = x + self.ffn(self.ln2(x))\n        return x\n\nclass GPT(nn.Module):\n    def __init__(self, vocab, d=384, h=6, n=6, max_seq=256):\n        super().__init__()\n        self.tok = nn.Embedding(vocab, d)\n        self.pos = nn.Embedding(max_seq, d)\n        self.blocks = nn.ModuleList([Block(d, h) for _ in range(n)])\n        self.ln_f = nn.LayerNorm(d)\n        self.head = nn.Linear(d, vocab, bias=False)\n        self.register_buffer("mask", torch.tril(torch.ones(max_seq, max_seq)))\n    def forward(self, ids, targets=None):\n        B, T = ids.shape\n        x = self.tok(ids) + self.pos(torch.arange(T, device=ids.device))\n        for blk in self.blocks: x = blk(x, self.mask[:T,:T])\n        logits = self.head(self.ln_f(x))\n        loss = None\n        if targets is not None:\n            loss = F.cross_entropy(logits.reshape(-1,logits.size(-1)), targets.reshape(-1))\n        return logits, loss`},
     {h:"KV cache", body:"<p>At inference, cache K,V for prior tokens. Reduces O(T²) → O(T) per new token.</p>"},
+    {h:"🧮 Interactive: Parameter count calculator", body:`<p>Plug in transformer hyperparams and see total parameter count. Per-block params ≈ 12·d² (QKV proj 3d² + output d² + FFN 8d²). Plus embedding table vocab·d.</p>
+    <div class="minilab">
+      <label>d_model: <input id="pc-d" type="number" value="768" min="64" step="64" oninput="paramCalc()"></label>
+      <label>n_layers: <input id="pc-n" type="number" value="12" min="1" max="200" oninput="paramCalc()"></label>
+      <label>vocab_size: <input id="pc-v" type="number" value="50257" min="1000" step="1000" oninput="paramCalc()"></label>
+      <label>FFN expand factor: <input id="pc-f" type="number" value="4" min="1" max="16" step="1" oninput="paramCalc()"></label>
+      <div class="out" id="pc-out"></div>
+    </div>
+    <p><b>Compare to real models:</b> GPT-2 small (d=768, n=12) ≈ 124M. GPT-2 medium (d=1024, n=24) ≈ 350M. Llama-3 8B (d=4096, n=32) ≈ 8B (uses GQA + tied embeddings, formula differs).</p>
+    <script>
+    function paramCalc(){
+      const d = +document.getElementById("pc-d").value;
+      const n = +document.getElementById("pc-n").value;
+      const v = +document.getElementById("pc-v").value;
+      const f = +document.getElementById("pc-f").value;
+      const perBlock = 4*d*d + 2*d*f*d;  // QKV 3d² + out d² + FFN 2·(d·fd)
+      const blockTotal = n * perBlock;
+      const emb = v * d;
+      const total = blockTotal + emb;
+      const fmt = x => x.toLocaleString();
+      document.getElementById("pc-out").innerHTML =
+        \`Per-block params: \${fmt(perBlock)}\\n\` +
+        \`All blocks (n=\${n}): \${fmt(blockTotal)}\\n\` +
+        \`Embedding table (vocab·d): \${fmt(emb)}\\n\` +
+        \`<b>Total: \${fmt(total)} (\${(total/1e6).toFixed(1)}M)</b>\`;
+    }
+    setTimeout(paramCalc, 100);
+    </script>`},
+    {h:"Common mistakes + interview prep", body:`<div class="mistake"><b>Common mistake #1:</b> using <code>mask = torch.ones(T,T)</code> as causal mask. ones means no mask. Need <code>torch.tril(torch.ones(T,T))</code>.</div>
+    <div class="mistake"><b>Common mistake #2:</b> applying scale AFTER softmax. Wrong: <code>softmax(QK^T) / √d_k</code>. Right: <code>softmax(QK^T / √d_k)</code>.</div>
+    <div class="mistake"><b>Common mistake #3:</b> forgetting <code>opt.zero_grad()</code> → gradients accumulate across steps → wrong updates.</div>
+    <div class="interview"><b>Interview question:</b> "Walk through self-attention for a single token, step by step." Practice answering aloud. See the by-hand 3-token walkthrough lesson above.</div>
+    <div class="interview"><b>Interview question:</b> "Why divide by √d_k?" → Var(q·k) grows with d_k. Without scaling, softmax saturates near one-hot → vanishing gradients. Dividing by √d_k keeps variance ≈ 1.</div>
+    <div class="interview"><b>Interview question:</b> "Estimate GPT-2 124M parameters from architecture." Use the calculator above. d=768, n=12, vocab=50257 → ~124M (with weight tying).</div>`},
     {h:"Resources", body:`<ul>
       <li><a href="https://arxiv.org/abs/1706.03762" target="_blank">Attention Is All You Need</a> — read 3×</li>
       <li>Karpathy <a href="https://www.youtube.com/watch?v=kCc8FmEb1nY" target="_blank">Let's build GPT</a></li>
@@ -1036,7 +1101,7 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   ],
   project:{title:"Phase 6 deliverable", steps:["nanoGPT from scratch on Tiny Shakespeare","Add RoPE","Add KV cache, benchmark speedup"]}
 },
-{ id:8, title:"Phase 7 — Pretrain Small LLM", est:"~40 hrs",
+{ id:8, title:"Phase 7 — Pretrain Small LLM", est:"40-60 hrs",
   intro:"Reproduce GPT-2 (or smaller). This is the phase that converts you from \"reads about LLMs\" to \"trains LLMs\". Karpathy has reproduced GPT-2 124M for ~$10 of cloud compute — you can too.",
   lessons:[
     {h:"What pretraining actually is", body:`<p><b>Pretraining</b> = take a freshly initialized transformer (random weights), feed it billions of web tokens, and train it to predict the next token. After enough data + compute, you get a model that "knows things" — language, facts, basic reasoning.</p>
@@ -1091,7 +1156,7 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   ],
   project:{title:"Phase 7 deliverable", steps:["10M-124M GPT-2 reproduction on FineWeb","Loss curves on W&B","HF Hub model card","HellaSwag eval"]}
 },
-{ id:9, title:"Phase 8 — Fine-tuning + Alignment", est:"~30 hrs",
+{ id:9, title:"Phase 8 — Fine-tuning + Alignment", est:"25-40 hrs",
   intro:"Pretrained base models aren't useful out of the box — they continue prompts but don't follow instructions or refuse harmful requests. Fine-tuning + alignment turns base models into ChatGPT/Claude-style assistants.",
   lessons:[
     {h:"The three stages of making an assistant", body:`<p><b>Pretraining</b> (Phase 7) gives you a model that completes text. Ask it "How do I bake bread?" and it might respond "is a common question. Here are 10 other things people ask:". Not useful.</p>
@@ -1149,7 +1214,7 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
   ],
   project:{title:"Phase 8 deliverable", steps:["LoRA fine-tune Llama-3.2-1B or Qwen2.5-0.5B","DPO on preferences, compare","Push to HF Hub with model card"]}
 },
-{ id:10, title:"Phase 9 — Applications with Claude API", est:"~30 hrs",
+{ id:10, title:"Phase 9 — Applications with Claude API", est:"30-50 hrs",
   intro:"Ship products. Claude as backbone. Highest job-market overlap.",
   lessons:[
     {h:"Verify model IDs + pricing FIRST", body:`<div class="callout warn"><b>Always check current model IDs + prices</b> at <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank">docs.anthropic.com/models</a> and <a href="https://www.anthropic.com/pricing" target="_blank">anthropic.com/pricing</a>. Model IDs follow pattern <code>claude-{tier}-{major}-{minor}[-YYYYMMDD]</code>. As of 2026 this course uses Opus 4.7 / Sonnet 4.6 / Haiku 4.5 — if those 404, drop one minor version.</div>
@@ -1322,7 +1387,7 @@ summary = cl.messages.create(
   ],
   project:{title:"Phase 9 deliverable", steps:["CLI tool with tool use (file r/w, run cmd)","Discord/Slack bot powered by Claude","Eval harness with golden set"]}
 },
-{ id:11, title:"Phase 10 — RAG Systems", est:"~20 hrs",
+{ id:11, title:"Phase 10 — RAG Systems", est:"18-28 hrs",
   intro:"LLMs only know what's in their training data, frozen at some past date. They don't know your company's docs, today's news, or your private notes. RAG (Retrieval-Augmented Generation) fixes this by fetching relevant info at query time and injecting it into the prompt.",
   lessons:[
     {h:"What RAG is and why it beats fine-tuning for most cases", body:`<p><b>Two ways to give an LLM new knowledge:</b></p>
@@ -1392,7 +1457,7 @@ summary = cl.messages.create(
   ],
   project:{title:"Phase 10 deliverable", steps:["RAG over your PDFs, deployed","Contextual retrieval, measure recall@5 lift","Hybrid + reranker"]}
 },
-{ id:12, title:"Phase 11 — AI Agents", est:"~30 hrs",
+{ id:12, title:"Phase 11 — AI Agents", est:"25-40 hrs",
   intro:"An <b>agent</b> = LLM + tools + a loop where the LLM decides what to do next based on previous results. This is where AI stops being a chatbot and starts being a worker.",
   lessons:[
     {h:"What an agent actually is (vs hype)", body:`<p>"Agent" is overused. Concrete definition: <b>an LLM in a loop where, at each step, the model can call tools, get back results, and decide what to do next — until it produces a final answer.</b></p>
@@ -1447,7 +1512,7 @@ summary = cl.messages.create(
   ],
   project:{title:"Phase 11 deliverable", steps:["Research agent: topic → report","Code review agent on PR diff","Observability dashboard"]}
 },
-{ id:13, title:"Phase 12 — MLOps / AI Engineering", est:"~30 hrs",
+{ id:13, title:"Phase 12 — MLOps / AI Engineering", est:"30-45 hrs",
   intro:"Notebooks don't pay rent. This phase turns your prototypes into deployed services that real users hit — with auth, monitoring, security, and cost control.",
   lessons:[
     {h:"What MLOps actually means for AI engineers", body:`<p><b>MLOps = the operations side of ML</b> — taking a trained model and making it a reliable service.</p>
@@ -1804,6 +1869,31 @@ const GAMES = [
   ]},
 { id:"token-lab", title:"🧪 Token Lab", desc:"See how text gets tokenized (simplified BPE).", xp:50, type:"token"},
 { id:"attention-toy", title:"👁️ Attention Toy", desc:"Set similarities between tokens and see softmax attention.", xp:50, type:"attention"},
+{ id:"math-drill", title:"⚡ ML Math Speed Drill", desc:"Rapid-fire math you need: matmul shapes, softmax, gradients.", xp:120, type:"flash",
+  cards:[
+    {q:"(8, 16) @ (16, 32) shape?", opts:["(8,16)","(16,32)","(8,32)","Error"], answer:2},
+    {q:"(32, 64) @ (64, 64) @ (64, 10) shape?", opts:["(64,10)","(32,10)","(32,64)","Error"], answer:1},
+    {q:"What is d/dx of x⁵?", opts:["x⁴","5x⁴","5x⁵","ln(5)"], answer:1},
+    {q:"d/dx of e^(2x)?", opts:["e^(2x)","2·e^(2x)","2x·e","e^(2x-1)"], answer:1},
+    {q:"d/dx of ln(x)?", opts:["x","1/x","ln(x)","e^x"], answer:1},
+    {q:"σ(z) = 1/(1+e⁻ᶻ). σ'(z) = ?", opts:["σ(z)","σ(z)(1-σ(z))","1-σ(z)","e⁻ᶻ"], answer:1},
+    {q:"softmax([1,1,1]) = ?", opts:["[1,1,1]","[1/3,1/3,1/3]","[0.5,0.5,0.5]","[e,e,e]"], answer:1},
+    {q:"softmax([-∞, 0, 0]) = ?", opts:["[0,0.5,0.5]","[0,0,0]","[-∞,0,0]","Error"], answer:0},
+    {q:"Cross-entropy when prediction matches one-hot truth exactly (p=1.0)?", opts:["0","1","∞","-1"], answer:0},
+    {q:"For random init with vocab=50000, untrained CE loss on next-token ≈ ?", opts:["0","ln(50000) ≈ 10.8","50000","1"], answer:1},
+  ]},
+{ id:"loss-picker", title:"🎯 Loss Function Picker", desc:"Pick the right loss for each problem.", xp:80, type:"flash",
+  cards:[
+    {q:"Predicting house price (continuous). Loss?", opts:["Cross-entropy","MSE (mean squared error)","Hinge","KL divergence"], answer:1},
+    {q:"Binary spam classification. Loss?", opts:["MSE","Binary cross-entropy","Cosine","Triplet"], answer:1},
+    {q:"Multi-class image classification (10 classes). Loss?", opts:["MSE","Binary CE","Categorical cross-entropy (softmax+CE)","L1"], answer:2},
+    {q:"Next-token language model. Loss?", opts:["MSE","Cross-entropy over vocab","BLEU","Perplexity directly"], answer:1},
+    {q:"Embedding learning (similar pairs close, dissimilar far). Loss?", opts:["Cross-entropy","Contrastive / triplet loss","MSE","Huber"], answer:1},
+    {q:"DPO preference fine-tuning. Loss?", opts:["MSE on rewards","-log σ(β·(logπ/π_ref ratios)) on (chosen, rejected)","KL only","Hinge"], answer:1},
+    {q:"Robust regression (outliers in target). Loss?", opts:["MSE","Huber loss","Cross-entropy","KL"], answer:1},
+    {q:"Aligning predicted distribution to true distribution (RLHF KL anchor)?", opts:["MSE","Cross-entropy","KL divergence","L1"], answer:2},
+  ]},
+{ id:"gd-sim", title:"📉 Gradient Descent Simulator", desc:"Tune LR + steps. Watch the ball roll into the valley.", xp:80, type:"gd"},
 ];
 
 /* ============================== BADGES ============================== */
@@ -2181,6 +2271,7 @@ function renderSingleGame(){
   else if(g.type==="flash") inner = renderFlash(g);
   else if(g.type==="token") inner = renderTokenLab();
   else if(g.type==="attention") inner = renderAttentionToy();
+  else if(g.type==="gd") inner = renderGdSim();
   document.getElementById("main").innerHTML = `
     <button onclick="currentGame=null; render();" style="background:var(--panel2);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:12px;margin-bottom:10px">← All games</button>
     <h2>${escapeHtml(g.title)}</h2>
@@ -2571,6 +2662,87 @@ function renderAttentionToy(){
     <div style="margin-top:10px;font-size:12px;color:var(--muted)">Each row sums to 100%. Try: row 0 = (10,0,0,0) → near one-hot. Increase d_k → softer attention. Causal: future positions zeroed.</div>
   </div>
   <div class="callout">Real transformers: d=64+ per head, learned Q/K projections from input, multi-head, 12-100+ layers. Same math.</div>`;
+}
+
+/* --------------------- GAME: GRADIENT DESCENT SIM --------------------- */
+function renderGdSim(){
+  setTimeout(gdRun, 0);
+  return `<div class="card">
+    <p>Function: <code>f(x) = x² − 4x + 5</code>. Minimum at x=2 (where f=1).</p>
+    <p>Gradient descent: <code>x ← x − lr · f'(x)</code> where <code>f'(x) = 2x − 4</code>.</p>
+    <div class="minilab">
+      <label>Start x₀: <input id="gd-x0" type="number" value="-3" step="0.5" oninput="gdRun()"></label>
+      <label>Learning rate: <input id="gd-lr" type="number" value="0.1" step="0.05" min="0.01" max="2" oninput="gdRun()"></label>
+      <label>Steps: <input id="gd-steps" type="number" value="20" min="1" max="200" oninput="gdRun()"></label>
+      <div id="gd-out" class="out" style="white-space:pre-wrap"></div>
+      <canvas id="gd-canvas" width="600" height="200" style="width:100%;background:var(--code);border-radius:6px;margin-top:10px"></canvas>
+    </div>
+    <p><b>Experiments to try:</b></p>
+    <ul>
+      <li>LR=0.1, start=-3: smooth convergence to x=2. Healthy.</li>
+      <li>LR=0.01: too slow — many steps, barely moves.</li>
+      <li>LR=1.0: oscillates around minimum, eventually settles.</li>
+      <li>LR=1.5: <b>diverges</b> — overshoots, x blows up. This is what "LR too high" looks like in real training.</li>
+      <li>LR=2.0+: explodes immediately.</li>
+    </ul>
+  </div>
+  <div class="callout">Real LLM training tunes LR with cosine schedule. Same principle — too high = NaN, too low = wasted compute.</div>`;
+}
+function gdRun(){
+  const x0 = parseFloat(document.getElementById("gd-x0")?.value) || -3;
+  const lr = parseFloat(document.getElementById("gd-lr")?.value) || 0.1;
+  const steps = parseInt(document.getElementById("gd-steps")?.value) || 20;
+  const f = x => x*x - 4*x + 5;
+  const grad = x => 2*x - 4;
+  const trail = [{x:x0, f:f(x0)}];
+  let x = x0;
+  for(let i = 0; i < steps; i++){
+    x = x - lr * grad(x);
+    if(!isFinite(x) || Math.abs(x) > 1e6){ trail.push({x, f:NaN, diverged:true}); break; }
+    trail.push({x, f:f(x)});
+  }
+  const last = trail[trail.length-1];
+  const out = document.getElementById("gd-out");
+  if(out){
+    out.innerHTML = trail.slice(0,8).map((p,i)=>`step ${i}: x=${p.x.toFixed(3)} f=${isNaN(p.f)?"DIVERGED":p.f.toFixed(4)}`).join("\\n") + (trail.length>8?`\\n... (showing first 8 of ${trail.length-1} steps)`:"") + `\\n\\nFinal: x=${last.x.toFixed(3)}, distance from min(x=2): ${Math.abs(last.x-2).toFixed(3)}`;
+  }
+  // canvas: plot f over [-2, 6] and trail dots
+  const c = document.getElementById("gd-canvas");
+  if(!c) return;
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const xMin = -2, xMax = 6, yMin = 0, yMax = 25;
+  const X = v => (v - xMin)/(xMax - xMin) * c.width;
+  const Y = v => c.height - (v - yMin)/(yMax - yMin) * c.height;
+  // axis
+  ctx.strokeStyle = "#23304a"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, Y(0)); ctx.lineTo(c.width, Y(0)); ctx.stroke();
+  // curve
+  ctx.strokeStyle = "#7aa2ff"; ctx.lineWidth = 2;
+  ctx.beginPath();
+  for(let v = xMin; v <= xMax; v += 0.05){
+    const px = X(v), py = Y(f(v));
+    if(v === xMin) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  // minimum marker
+  ctx.fillStyle = "#3ecf8e";
+  ctx.beginPath(); ctx.arc(X(2), Y(1), 4, 0, 2*Math.PI); ctx.fill();
+  // trail
+  trail.forEach((p, i)=>{
+    if(!isFinite(p.x)) return;
+    const px = Math.max(0, Math.min(c.width, X(p.x)));
+    const py = Math.max(0, Math.min(c.height, Y(p.f)));
+    ctx.fillStyle = `rgba(255, 209, 102, ${0.3 + 0.7*i/trail.length})`;
+    ctx.beginPath(); ctx.arc(px, py, 4, 0, 2*Math.PI); ctx.fill();
+  });
+  // claim XP on first interaction
+  if(!state.games["gd-sim"]?.claimed){
+    state.games["gd-sim"] = {claimed:true};
+    try{ saveProgress(); }catch(e){}
+    addXP(GAMES.find(g=>g.id==="gd-sim").xp, "Gradient Descent Sim");
+    refreshBadges();
+  }
 }
 
 /* --------------------- PORTFOLIO VIEW --------------------- */
