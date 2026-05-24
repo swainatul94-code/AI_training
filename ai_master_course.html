@@ -141,6 +141,12 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 .badge-card.earned.tier-silver .tier-tag{color:#c0c0c0}
 .badge-card.earned.tier-gold .tier-tag{color:#ffd166}
 .streak-banner{background:linear-gradient(90deg,rgba(255,107,107,.15),rgba(255,181,71,.15));border:1px solid var(--err);color:var(--ink);padding:8px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;gap:8px}
+.timer-stat{display:flex;align-items:center;gap:6px}
+.timer-stat #timer-btn{transition:transform .15s}
+.timer-stat #timer-btn:hover{transform:scale(1.15)}
+.timer-stat.running{border-color:var(--ok)}
+.timer-stat.running #timer-display{color:var(--ok);font-variant-numeric:tabular-nums}
+.timer-stat.paused #timer-display{color:var(--warn);font-variant-numeric:tabular-nums}
 .badge-card .icon{font-size:38px;margin-bottom:6px}
 .badge-card h4{margin:4px 0;color:var(--gold)}
 .badge-card p{font-size:11px;color:var(--muted);margin:0}
@@ -182,6 +188,16 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
     <div class="stat" aria-label="XP this level">XP <b id="xp">0</b> / <b id="xp-next">500</b></div>
     <div class="stat" aria-label="Day streak">🔥 Streak <b id="streak">0</b></div>
     <div class="stat" aria-label="Badges earned">🏆 Badges <b id="badge-count">0</b>/<b id="badge-total">0</b></div>
+    <div class="stat timer-stat" aria-label="Focus timer">
+      <button id="timer-btn" onclick="timerToggle()" style="background:transparent;border:none;color:var(--ink);cursor:pointer;font-size:14px;padding:0" title="Start 30-min focus session">▶</button>
+      <select id="timer-len" onchange="timerSetLen(this.value)" aria-label="Session length" style="background:transparent;border:none;color:var(--ink);font-size:11px;cursor:pointer">
+        <option value="25">25m</option>
+        <option value="30" selected>30m</option>
+        <option value="45">45m</option>
+        <option value="60">60m</option>
+      </select>
+      <b id="timer-display">30:00</b>
+    </div>
   </div>
 </header>
 <div class="body">
@@ -2838,12 +2854,14 @@ function importProgress(ev){
   };
   r.readAsText(f);
 }
-function showModal({title, body, okLabel="OK", requireType=null}){
+function showModal({title, body, okLabel="OK", requireType=null, hideCancel=false}){
   return new Promise(resolve=>{
     document.getElementById("modal-title").textContent = title;
     document.getElementById("modal-body").textContent = body;
     const extra = document.getElementById("modal-extra");
     const ok = document.getElementById("modal-ok");
+    const cancel = document.getElementById("modal-cancel");
+    if(cancel) cancel.style.display = hideCancel ? "none" : "";
     ok.textContent = okLabel;
     extra.innerHTML = "";
     if(requireType){
@@ -3743,11 +3761,121 @@ function markComplete(passed){
   render();
 }
 
+/* --------------------- FOCUS TIMER --------------------- */
+let timerState = {
+  running: false,
+  paused: false,
+  endsAt: null,     // epoch ms when current session ends
+  remaining: 30*60, // seconds remaining (used when paused)
+  lengthMin: 30,
+  interval: null,
+};
+function timerFormat(sec){
+  const m = Math.floor(Math.max(0, sec) / 60);
+  const s = Math.max(0, sec) % 60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function timerPaint(){
+  const stat = document.querySelector(".timer-stat");
+  const display = document.getElementById("timer-display");
+  const btn = document.getElementById("timer-btn");
+  if(!stat || !display || !btn) return;
+  let sec;
+  if(timerState.running && timerState.endsAt){
+    sec = Math.round((timerState.endsAt - Date.now()) / 1000);
+  } else if(timerState.paused){
+    sec = timerState.remaining;
+  } else {
+    sec = timerState.lengthMin * 60;
+  }
+  display.textContent = timerFormat(sec);
+  stat.classList.toggle("running", timerState.running && !timerState.paused);
+  stat.classList.toggle("paused", timerState.paused);
+  btn.textContent = (timerState.running && !timerState.paused) ? "⏸" : "▶";
+  btn.title = (timerState.running && !timerState.paused) ? "Pause" :
+              (timerState.paused ? "Resume" : "Start focus session");
+  if(timerState.running && !timerState.paused && sec <= 0){
+    timerFinish();
+  }
+}
+function timerToggle(){
+  if(timerState.running && !timerState.paused){
+    // pause
+    timerState.remaining = Math.max(0, Math.round((timerState.endsAt - Date.now()) / 1000));
+    timerState.paused = true;
+    timerState.endsAt = null;
+    clearInterval(timerState.interval);
+    timerState.interval = null;
+    timerPaint();
+    return;
+  }
+  // start or resume
+  const seconds = timerState.paused ? timerState.remaining : timerState.lengthMin * 60;
+  timerState.endsAt = Date.now() + seconds * 1000;
+  timerState.running = true;
+  timerState.paused = false;
+  if(timerState.interval) clearInterval(timerState.interval);
+  timerState.interval = setInterval(timerPaint, 1000);
+  timerPaint();
+}
+function timerSetLen(min){
+  if(timerState.running){
+    if(!confirm("A session is running. Reset to new length?")) {
+      document.getElementById("timer-len").value = String(timerState.lengthMin);
+      return;
+    }
+    timerReset();
+  }
+  timerState.lengthMin = parseInt(min) || 30;
+  timerState.remaining = timerState.lengthMin * 60;
+  timerPaint();
+}
+function timerReset(){
+  if(timerState.interval) clearInterval(timerState.interval);
+  timerState.interval = null;
+  timerState.running = false;
+  timerState.paused = false;
+  timerState.endsAt = null;
+  timerState.remaining = timerState.lengthMin * 60;
+  timerPaint();
+}
+async function timerFinish(){
+  if(timerState.interval) clearInterval(timerState.interval);
+  timerState.interval = null;
+  timerState.running = false;
+  timerState.paused = false;
+  timerState.remaining = timerState.lengthMin * 60;
+  timerPaint();
+  // award XP for a completed focus session
+  addXP(30, `Focus session (${timerState.lengthMin} min)`);
+  // sound (3 short beeps via WebAudio)
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    for(let i = 0; i < 3; i++){
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = 880; o.type = "sine";
+      g.gain.value = 0.15;
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i*0.4);
+      o.stop(ctx.currentTime + i*0.4 + 0.2);
+    }
+  }catch(e){}
+  // break modal
+  await showModal({
+    title: `🎉 ${timerState.lengthMin} minutes done!`,
+    body: "Take a real break: stand up, walk around, drink water, look out a window for 60+ seconds (eyes need it). Skip the phone — it's not a break. Come back when your brain is fresh. +30 XP earned.",
+    okLabel: "Back to learning",
+    hideCancel: true,
+  });
+}
+
 /* --------------------- BOOT --------------------- */
 function render(){ renderSidebar(); renderMain(); refreshHeader(); paintStreakBanner(); }
 updateStreak();
 refreshBadges();
 render();
+timerPaint();
 </script>
 </body>
 </html>
