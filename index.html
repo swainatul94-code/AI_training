@@ -205,6 +205,7 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
     <nav class="tabs">
       <button data-view="phases" class="active" onclick="switchView('phases')">Phases</button>
       <button data-view="games" onclick="switchView('games')">Games</button>
+      <button data-view="review" onclick="switchView('review')">Review <span id="review-due-badge" style="display:none;background:var(--err);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px"></span></button>
       <button data-view="portfolio" onclick="switchView('portfolio')">Portfolio</button>
       <button data-view="badges" onclick="switchView('badges')">Badges</button>
     </nav>
@@ -2791,6 +2792,8 @@ function loadProgress(){
       s.level = s.level || 1;
       s.streak = s.streak || 0;
       s.lastVisit = s.lastVisit || null;
+      s.review = s.review || {};         // {itemId: {ef, interval, due, reps, lastReview, q, opts, answer, explain, src}}
+      s.calibration = s.calibration || []; // [{topic, confidence:1-5, correct:bool, ts}]
       return s;
     }
   }catch(e){}
@@ -2800,7 +2803,64 @@ function loadProgress(){
     games: {},
     portfolio: {},
     badges: {},
+    review: {},
+    calibration: [],
   };
+}
+const DAY_MS = 86400000;
+function todayMs(){ const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); }
+function reviewAdd(itemId, q, opts, answer, explain, src){
+  if(!state.review) state.review = {};
+  if(state.review[itemId]) return; // already tracked
+  state.review[itemId] = {
+    ef: 2.5,
+    interval: 1,
+    due: todayMs() + DAY_MS,    // due tomorrow
+    reps: 0,
+    lastReview: null,
+    q, opts, answer, explain, src,
+  };
+  try{ saveProgress(); }catch(e){}
+}
+function reviewRate(itemId, quality){
+  const it = state.review[itemId];
+  if(!it) return;
+  // SM-2 algorithm
+  let ef = it.ef + (0.1 - (5-quality)*(0.08 + (5-quality)*0.02));
+  if(ef < 1.3) ef = 1.3;
+  it.ef = ef;
+  if(quality < 3){
+    it.interval = 1;
+    it.reps = 0;
+  } else {
+    it.reps = (it.reps || 0) + 1;
+    if(it.reps === 1) it.interval = 1;
+    else if(it.reps === 2) it.interval = 6;
+    else it.interval = Math.round(it.interval * ef);
+  }
+  it.lastReview = todayMs();
+  it.due = todayMs() + it.interval * DAY_MS;
+  // promote out if learned well (5 successful reviews + interval >= 30 days)
+  if(it.reps >= 5 && it.interval >= 30 && quality >= 4){
+    delete state.review[itemId];
+  }
+  saveProgress();
+}
+function reviewDueCount(){
+  const now = todayMs();
+  return Object.values(state.review || {}).filter(it => it.due <= now).length;
+}
+function reviewDueItems(){
+  const now = todayMs();
+  return Object.entries(state.review || {})
+    .filter(([_, it]) => it.due <= now)
+    .sort((a, b) => a[1].due - b[1].due);
+}
+function calibrationAdd(topic, confidence, correct){
+  if(!state.calibration) state.calibration = [];
+  state.calibration.push({topic, confidence, correct, ts: Date.now()});
+  if(state.calibration.length > 500) state.calibration.shift(); // cap
+  try{ saveProgress(); }catch(e){}
 }
 function saveProgress(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -2833,6 +2893,8 @@ function validateImported(obj){
   if(obj.games && typeof obj.games === "object") skeleton.games = obj.games;
   if(obj.portfolio && typeof obj.portfolio === "object") skeleton.portfolio = obj.portfolio;
   if(obj.badges && typeof obj.badges === "object") skeleton.badges = obj.badges;
+  if(obj.review && typeof obj.review === "object") skeleton.review = obj.review;
+  if(Array.isArray(obj.calibration)) skeleton.calibration = obj.calibration;
   return skeleton;
 }
 function recomputeLevel(){
@@ -2969,6 +3031,12 @@ function refreshHeader(){
   const earned = BADGES.filter(b=>b.check(state)).length;
   document.getElementById("badge-count").textContent = earned;
   document.getElementById("badge-total").textContent = BADGES.length;
+  const dueBadge = document.getElementById("review-due-badge");
+  if(dueBadge){
+    const due = reviewDueCount();
+    dueBadge.style.display = due > 0 ? "inline-block" : "none";
+    dueBadge.textContent = due;
+  }
 }
 let refreshingBadges = false;
 function refreshBadges(){
@@ -3024,16 +3092,32 @@ function renderSidebar(){
         <span class="badge ${best?'done':''}">${best?"best "+best:"+"+g.xp+" XP"}</span>
       </button>`;
     }).join("");
+  } else if(currentView==="review"){
+    const dueCount = reviewDueCount();
+    const totalCount = Object.keys(state.review || {}).length;
+    el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px">Spaced repetition queue. Get a question wrong on any phase quiz → comes here. SM-2 schedules when to re-test. Learned items graduate out.</div>
+      <div style="padding:8px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;margin-top:8px">
+        <div style="font-size:13px"><b>${dueCount}</b> due today</div>
+        <div style="font-size:12px;color:var(--muted)">${totalCount} total in queue</div>
+      </div>`;
   } else if(currentView==="portfolio"){
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px">Track per-phase deliverables: GitHub repo, HF Hub model, blog post. Each adds XP + unlocks badges.</div>`;
   } else if(currentView==="badges"){
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px">Earn badges by completing phases, beating games, building portfolio, keeping streaks.</div>`;
+  }
+  // refresh review due badge
+  const dueBadge = document.getElementById("review-due-badge");
+  if(dueBadge){
+    const due = reviewDueCount();
+    dueBadge.style.display = due > 0 ? "inline-block" : "none";
+    dueBadge.textContent = due;
   }
 }
 
 function renderMain(){
   if(currentView==="phases") renderPhase();
   else if(currentView==="games") renderGames();
+  else if(currentView==="review") renderReview();
   else if(currentView==="portfolio") renderPortfolio();
   else if(currentView==="badges") renderBadges();
 }
@@ -3622,6 +3706,145 @@ function gdRun(){
   }
 }
 
+/* --------------------- REVIEW VIEW (SM-2 spaced repetition) --------------------- */
+let currentReviewItem = null;
+let reviewChoice = null;
+let reviewShown = false;
+function renderReview(){
+  const dueCount = reviewDueCount();
+  const totalCount = Object.keys(state.review || {}).length;
+  const calib = state.calibration || [];
+  // confidence vs correctness summary
+  const buckets = {1:[0,0],2:[0,0],3:[0,0],4:[0,0],5:[0,0]};
+  calib.forEach(c=>{
+    if(buckets[c.confidence]){ buckets[c.confidence][1]++; if(c.correct) buckets[c.confidence][0]++; }
+  });
+  // weak spots: per-topic accuracy
+  const topicAcc = {};
+  calib.forEach(c=>{
+    if(!topicAcc[c.topic]) topicAcc[c.topic] = {total:0, correct:0, confSum:0};
+    topicAcc[c.topic].total++;
+    if(c.correct) topicAcc[c.topic].correct++;
+    topicAcc[c.topic].confSum += c.confidence;
+  });
+  const weakSpots = Object.entries(topicAcc)
+    .filter(([_, v]) => v.total >= 2)
+    .map(([t, v]) => ({topic:t, acc: v.correct/v.total, avgConf: v.confSum/v.total, n: v.total}))
+    .sort((a, b) => a.acc - b.acc)
+    .slice(0, 5);
+  let inner = `<h2>🔁 Review queue</h2>
+    <p>Items you got wrong come back here on a spaced schedule (SM-2 algorithm). Wait too long and they reset to 1 day. Get them right repeatedly and intervals grow exponentially. Items learned (5+ correct, 30+ day interval) graduate out.</p>
+    <div class="kpi-row">
+      <div class="kpi"><div class="v">${dueCount}</div><div class="l">Due today</div></div>
+      <div class="kpi"><div class="v">${totalCount}</div><div class="l">In queue</div></div>
+      <div class="kpi"><div class="v">${calib.length}</div><div class="l">Calibration samples</div></div>
+    </div>`;
+  if(currentReviewItem){
+    const it = state.review[currentReviewItem];
+    if(!it){ currentReviewItem = null; }
+    else {
+      const opts = (it.opts || []).map((o, j)=>{
+        let cls = "";
+        if(reviewShown){
+          if(j === it.answer) cls = "background:rgba(62,207,142,.18);border-color:var(--ok)";
+          else if(j === reviewChoice) cls = "background:rgba(255,107,107,.15);border-color:var(--err)";
+        }
+        return `<label style="display:block;background:var(--panel);border:1px solid var(--border);${cls};border-radius:6px;padding:8px 12px;margin:4px 0;cursor:pointer"><input type="radio" name="rq" value="${j}" ${reviewChoice===j?'checked':''} ${reviewShown?'disabled':''} onclick="reviewChoice=${j}; renderMain();"> ${escapeHtml(o)}</label>`;
+      }).join("");
+      inner += `<div class="card">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">From: ${escapeHtml(it.src||"")}</div>
+        <div style="font-weight:600;margin-bottom:8px">${escapeHtml(it.q)}</div>
+        <div>${opts}</div>`;
+      if(!reviewShown){
+        inner += `<button onclick="reviewCheck()" style="background:var(--accent);color:#0b0f17;border:none;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer;margin-top:10px" ${reviewChoice==null?'disabled':''}>Check</button>`;
+      } else {
+        const correct = reviewChoice === it.answer;
+        inner += `<div class="feedback ${correct?'ok':'bad'}" style="margin-top:10px;padding:10px;border-radius:6px;background:${correct?'rgba(62,207,142,.12)':'rgba(255,107,107,.10)'};border:1px solid ${correct?'var(--ok)':'var(--err)'}">${correct?'✓ Right.':'✗ Wrong.'} ${escapeHtml(it.explain||"")}</div>
+          <p style="margin-top:14px;font-size:13px;color:var(--muted)">How well did you remember?</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="reviewSubmit(0)" style="flex:1;min-width:80px;background:var(--err);color:#fff;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">Again<br><span style="font-size:10px;font-weight:400">1 day</span></button>
+            <button onclick="reviewSubmit(3)" style="flex:1;min-width:80px;background:var(--warn);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">Hard</button>
+            <button onclick="reviewSubmit(4)" style="flex:1;min-width:80px;background:var(--accent);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">Good</button>
+            <button onclick="reviewSubmit(5)" style="flex:1;min-width:80px;background:var(--ok);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">Easy</button>
+          </div>`;
+      }
+      inner += `</div>`;
+      document.getElementById("main").innerHTML = inner;
+      window.scrollTo({top:0,behavior:"smooth"});
+      return;
+    }
+  }
+  // queue list
+  const due = reviewDueItems();
+  if(due.length){
+    inner += `<h3>Due now (${due.length})</h3>`;
+    inner += `<div class="card"><ul style="list-style:none;padding:0;margin:0">`;
+    due.slice(0, 20).forEach(([id, it])=>{
+      inner += `<li style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px">${escapeHtml((it.q||"").slice(0, 80))}${(it.q||"").length>80?'…':''}</span>
+        <button onclick="reviewStart('${id}')" style="background:var(--accent);color:#0b0f17;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;font-weight:600">Review →</button>
+      </li>`;
+    });
+    inner += `</ul></div>`;
+  } else if(totalCount === 0){
+    inner += `<div class="card"><p>Queue is empty. Items you get wrong on phase quizzes will appear here on a spaced schedule.</p><p style="color:var(--muted);font-size:13px">Want to seed practice? Open any phase quiz, deliberately pick a wrong answer, and they'll land here.</p></div>`;
+  } else {
+    const next = Object.values(state.review).sort((a,b)=>a.due-b.due)[0];
+    const days = Math.ceil((next.due - todayMs()) / DAY_MS);
+    inner += `<div class="card"><p>✓ Nothing due today. Next review in <b>${days}</b> day${days===1?'':'s'}.</p></div>`;
+  }
+  // confidence calibration chart
+  if(calib.length){
+    inner += `<h3>Confidence calibration (last ${calib.length} answers)</h3>
+      <div class="card">
+        <p style="font-size:13px;color:var(--muted)">Well-calibrated: confidence matches accuracy. Overconfident: high conf + low acc.</p>
+        <table>
+          <tr><th>Confidence</th><th>Accuracy</th><th>Samples</th><th>Verdict</th></tr>`;
+    for(let c = 5; c >= 1; c--){
+      const [corr, total] = buckets[c];
+      if(!total) continue;
+      const acc = total ? (corr/total*100).toFixed(0) : "—";
+      const expected = {1:20, 2:40, 3:60, 4:80, 5:90};
+      const diff = total ? (corr/total*100) - expected[c] : 0;
+      const verdict = total < 3 ? "—" : (diff > 15 ? "🟢 under-confident" : diff < -15 ? "🔴 over-confident" : "✓ calibrated");
+      inner += `<tr><td>${c}/5</td><td>${acc}%</td><td>${total}</td><td>${verdict}</td></tr>`;
+    }
+    inner += `</table></div>`;
+  }
+  // weak spots
+  if(weakSpots.length){
+    inner += `<h3>🎯 Weakest topics</h3>
+      <div class="card">
+        <p style="font-size:13px;color:var(--muted)">Topics where you have lowest accuracy. Re-read the lesson.</p>
+        <table><tr><th>Topic</th><th>Accuracy</th><th>Avg confidence</th><th>Samples</th></tr>`;
+    weakSpots.forEach(w => {
+      inner += `<tr><td>${escapeHtml(w.topic)}</td><td>${(w.acc*100).toFixed(0)}%</td><td>${w.avgConf.toFixed(1)}/5</td><td>${w.n}</td></tr>`;
+    });
+    inner += `</table></div>`;
+  }
+  document.getElementById("main").innerHTML = inner;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function reviewStart(id){
+  currentReviewItem = id;
+  reviewChoice = null;
+  reviewShown = false;
+  renderMain();
+}
+function reviewCheck(){
+  reviewShown = true;
+  renderMain();
+}
+function reviewSubmit(quality){
+  reviewRate(currentReviewItem, quality);
+  addXP(quality >= 3 ? 5 : 2, "Review attempt");
+  currentReviewItem = null;
+  reviewChoice = null;
+  reviewShown = false;
+  refreshBadges();
+  renderMain();
+}
+
 /* --------------------- PORTFOLIO VIEW --------------------- */
 function renderPortfolio(){
   const phases = COURSE.filter(p => p.id >= 0).slice(0, 14);
@@ -3709,17 +3932,63 @@ function copyPre(btn){
   navigator.clipboard.writeText(code);
   btn.innerText="copied"; setTimeout(()=>btn.innerText="copy", 900);
 }
-function submitMCQ(i, correctIdx){
+async function submitMCQ(i, correctIdx){
   const sel = document.querySelector(`input[name="q${i}"]:checked`);
   if(!sel){ xpPop("Pick an answer first"); return; }
   const choice = parseInt(sel.value);
   const ps = state.phases[COURSE[currentPhase].id];
+  // ask confidence before revealing answer (only first attempt)
+  let confidence = ps.quiz[i]?.confidence;
+  if(confidence == null){
+    confidence = await askConfidence();
+    if(confidence == null){ return; } // cancelled
+  }
   const wasCorrect = ps.quiz[i]?.correct;
-  ps.quiz[i] = {choice, correct: choice===correctIdx, feedback:true};
+  const correct = (choice === correctIdx);
+  ps.quiz[i] = {choice, correct, feedback:true, confidence};
+  const phase = COURSE[currentPhase];
+  calibrationAdd(phase.title, confidence, correct);
+  // if wrong → enqueue for spaced repetition
+  if(!correct){
+    const q = phase.quiz[i];
+    const itemId = `phase${phase.id}_q${i}`;
+    reviewAdd(itemId, q.q, q.options, q.answer, q.explain, phase.title);
+    xpPop("Added to Review queue");
+  }
   saveProgress();
-  if(choice===correctIdx && !wasCorrect) addXP(10, "Correct answer");
+  if(correct && !wasCorrect) addXP(10, "Correct answer");
   refreshBadges();
   renderMain();
+}
+function askConfidence(){
+  return new Promise(resolve=>{
+    document.getElementById("modal-title").textContent = "How confident in your answer?";
+    document.getElementById("modal-body").textContent = "Rate before you check. This trains you to know when you're guessing vs sure.";
+    const extra = document.getElementById("modal-extra");
+    extra.innerHTML = `
+      <div style="display:flex;gap:6px;justify-content:space-between;margin-top:14px">
+        <button data-c="1" style="flex:1;background:var(--err);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">1<br><span style="font-size:10px;font-weight:400">Guess</span></button>
+        <button data-c="2" style="flex:1;background:#ff9b6b;color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">2<br><span style="font-size:10px;font-weight:400">Unsure</span></button>
+        <button data-c="3" style="flex:1;background:var(--warn);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">3<br><span style="font-size:10px;font-weight:400">Maybe</span></button>
+        <button data-c="4" style="flex:1;background:#a9d684;color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">4<br><span style="font-size:10px;font-weight:400">Likely</span></button>
+        <button data-c="5" style="flex:1;background:var(--ok);color:#0b0f17;border:none;border-radius:6px;padding:10px;font-weight:600;cursor:pointer">5<br><span style="font-size:10px;font-weight:400">Sure</span></button>
+      </div>`;
+    document.getElementById("modal-ok").style.display = "none";
+    document.getElementById("modal-cancel").style.display = "";
+    const backdrop = document.getElementById("modal-backdrop");
+    backdrop.style.display = "flex";
+    const close = (val)=>{
+      backdrop.style.display = "none";
+      document.getElementById("modal-ok").style.display = "";
+      extra.innerHTML = "";
+      document.getElementById("modal-cancel").onclick = null;
+      resolve(val);
+    };
+    extra.querySelectorAll("button[data-c]").forEach(btn=>{
+      btn.onclick = ()=>close(parseInt(btn.dataset.c));
+    });
+    document.getElementById("modal-cancel").onclick = ()=>close(null);
+  });
 }
 function saveShort(i){
   const txt = document.getElementById(`short-${i}`).value;
