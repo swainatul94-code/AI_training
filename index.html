@@ -1982,6 +1982,112 @@ curl -X POST https://yourapp.up.railway.app/ask \\
     <div class="mistake"><b>Mistake:</b> running expensive Claude calls on health-check pings. Make <code>/</code> return static JSON; only call Claude on real endpoints.</div>
     <h4>Portability</h4>
     <p>The same <code>app.py</code> + <code>requirements.txt</code> deploys without changes to Fly.io, Render, Modal, Cloud Run. Railway uses a standard Dockerfile under the hood. Easy to switch if you outgrow hobby tier.</p>`},
+    {h:"💸 Free tier reference — build without paying", body:`<p>This page tracks every free quota you can use to learn + ship AI without spending money. Verify limits at each provider's pricing page (changes fast).</p>
+    <h4>LLM APIs (cloud hosted)</h4>
+    <table>
+      <tr><th>Provider</th><th>Free tier</th><th>Models</th><th>Use for</th></tr>
+      <tr><td><b>Anthropic Claude</b></td><td>$5 signup credit (no recurring free tier)</td><td>Opus 4.7, Sonnet 4.6, Haiku 4.5</td><td>This course default. Spend cap in console.</td></tr>
+      <tr><td><b>Google Gemini</b></td><td>~60 req/min free indefinite, 1500 req/day</td><td>Gemini 2.5 Flash, 2.5 Pro (limited)</td><td>Cheap experimentation, vision tasks</td></tr>
+      <tr><td><b>Groq</b></td><td>Generous free tier, rate-limited per model</td><td>Llama 3.3 70B, Mixtral, DeepSeek-R1 distill</td><td>Ultra-fast inference (~500 tok/s)</td></tr>
+      <tr><td><b>Together AI</b></td><td>$1 signup credit</td><td>Llama, Qwen, DeepSeek, Mixtral</td><td>Compare open models cheaply</td></tr>
+      <tr><td><b>DeepSeek</b></td><td>$5 signup credit, very cheap pay-as-you-go</td><td>DeepSeek-V3, R1 reasoning</td><td>Reasoning, code</td></tr>
+      <tr><td><b>Mistral La Plateforme</b></td><td>Free tier on Mistral Small / Codestral</td><td>Mistral family</td><td>European data residency option</td></tr>
+      <tr><td><b>HuggingFace Inference API</b></td><td>Free tier rate-limited (~30k chars/mo)</td><td>Any HF-hosted model</td><td>Quick model tests, no infra</td></tr>
+      <tr><td><b>OpenRouter</b></td><td>"Free" models routed (rate-limited; Llama-3.1-8B-Instruct:free, Gemma 2 9B:free etc.)</td><td>Routes to many providers</td><td>Try any model with one API key</td></tr>
+      <tr><td><b>Cohere</b></td><td>Trial API key with rate limits</td><td>Command R, R+</td><td>Free embeddings included</td></tr>
+      <tr><td><b>Cerebras</b></td><td>Free tier on Llama 3.3</td><td>Llama family</td><td>Even faster than Groq (~2000 tok/s)</td></tr>
+    </table>
+    <h4>Local LLMs (free forever)</h4>
+    <table>
+      <tr><th>Tool</th><th>What</th><th>Hardware</th></tr>
+      <tr><td><b>Ollama</b></td><td>One-command local LLM (Llama, Qwen, DeepSeek, Phi). Mac/Windows/Linux.</td><td>16GB RAM for 7B models, 32GB for 13B</td></tr>
+      <tr><td><b>LM Studio</b></td><td>GUI wrapper around llama.cpp. GGUF models from HF.</td><td>Same as Ollama</td></tr>
+      <tr><td><b>llama.cpp</b></td><td>CPU/GPU pure C++. Powers Ollama under the hood.</td><td>Even a Raspberry Pi 5 can run 1-3B</td></tr>
+      <tr><td><b>vLLM</b></td><td>Production serving (needs GPU). Self-host.</td><td>24GB GPU for 7B bf16, 8GB for 7B AWQ-4bit</td></tr>
+    </table>
+    <h4>Cloud compute (training / heavy inference)</h4>
+    <table>
+      <tr><th>Provider</th><th>Free tier</th><th>Use for</th></tr>
+      <tr><td><b>Kaggle</b></td><td>30 hrs/week free T4/P100 GPU</td><td>Phase 7 LITE local-tier training, small fine-tunes</td></tr>
+      <tr><td><b>Google Colab</b></td><td>Free T4 occasional (no SLA)</td><td>Quick experiments, never long runs</td></tr>
+      <tr><td><b>RunPod</b></td><td>$5 signup credit; spot A100 ~$1/hr</td><td>GPT-2 124M reproduction sweet spot</td></tr>
+      <tr><td><b>Vast.ai</b></td><td>Auction pricing, $5 signup</td><td>Cheapest unreliable compute</td></tr>
+      <tr><td><b>Lightning AI Studios</b></td><td>22 hrs free GPU/mo</td><td>Hosted notebooks with deployable apps</td></tr>
+      <tr><td><b>Modal</b></td><td>$30/mo free compute credit</td><td>Serverless GPU functions</td></tr>
+    </table>
+    <h4>Embeddings (free or trial)</h4>
+    <table>
+      <tr><th>Provider</th><th>Free</th><th>Notes</th></tr>
+      <tr><td><b>sentence-transformers (local)</b></td><td>Free forever</td><td>all-MiniLM-L6-v2 (384d, fast), bge-small-en (good quality)</td></tr>
+      <tr><td><b>Voyage AI</b></td><td>~50M tokens free</td><td>voyage-3, voyage-3-lite. Best general quality.</td></tr>
+      <tr><td><b>Cohere Embed</b></td><td>Trial key, generous</td><td>embed-v3, multilingual</td></tr>
+      <tr><td><b>OpenAI text-embedding-3</b></td><td>No free tier, very cheap</td><td>$0.02/1M tokens for small</td></tr>
+      <tr><td><b>Mixedbread / Jina</b></td><td>Free tiers available</td><td>Open-weights also on HF</td></tr>
+    </table>
+    <h4>Vector databases</h4>
+    <table>
+      <tr><th>Tool</th><th>Free</th><th>Use</th></tr>
+      <tr><td><b>Qdrant (local Docker / Cloud free tier)</b></td><td>Free 1GB cluster</td><td>Default for this course</td></tr>
+      <tr><td><b>pgvector + Postgres</b></td><td>Free with any Postgres (Railway, Supabase, Neon)</td><td>If you already have Postgres</td></tr>
+      <tr><td><b>Pinecone Starter</b></td><td>Free 1 project, 1 index, 100k vectors</td><td>Managed, fastest start</td></tr>
+      <tr><td><b>Chroma (local)</b></td><td>Free pip install</td><td>Embedded, no server</td></tr>
+      <tr><td><b>Weaviate Sandbox</b></td><td>14-day free sandbox</td><td>Schema-rich vector DB</td></tr>
+      <tr><td><b>LanceDB</b></td><td>Free, embedded, file-based</td><td>SQLite of vector DBs</td></tr>
+    </table>
+    <h4>Deployment (apps + APIs)</h4>
+    <table>
+      <tr><th>Platform</th><th>Free</th><th>Use</th></tr>
+      <tr><td><b>Railway hobby</b></td><td>$5/mo credit</td><td>Default — you already have this</td></tr>
+      <tr><td><b>Fly.io</b></td><td>~3 small VMs free</td><td>Edge-deployed Claude apps</td></tr>
+      <tr><td><b>Render</b></td><td>Free static + 750 hrs/mo web service</td><td>Sleeps after 15 min idle</td></tr>
+      <tr><td><b>Vercel hobby</b></td><td>Free unlimited static + serverless</td><td>Front-end + lightweight API</td></tr>
+      <tr><td><b>Cloudflare Workers</b></td><td>100k req/day free</td><td>Edge Claude proxy</td></tr>
+      <tr><td><b>HuggingFace Spaces</b></td><td>Free CPU, paid GPU</td><td>Gradio/Streamlit AI demos</td></tr>
+      <tr><td><b>GitHub Pages</b></td><td>Free static</td><td>This course is hosted here</td></tr>
+    </table>
+    <h4>Datasets</h4>
+    <table>
+      <tr><th>Source</th><th>What</th></tr>
+      <tr><td><b>HuggingFace Datasets</b></td><td>200k+ datasets, free. Text, vision, audio, multimodal.</td></tr>
+      <tr><td><b>Kaggle Datasets</b></td><td>Free download + Kaggle kernels</td></tr>
+      <tr><td><b>Common Crawl</b></td><td>Petabytes of web text, free download</td></tr>
+      <tr><td><b>FineWeb / FineWeb-Edu</b></td><td>Filtered Common Crawl, ready for pretraining</td></tr>
+      <tr><td><b>The Pile</b></td><td>800GB curated pretraining corpus</td></tr>
+      <tr><td><b>Anthropic HH-RLHF</b></td><td>Helpful/harmless preference pairs (HF)</td></tr>
+      <tr><td><b>UltraChat / Alpaca / Tulu</b></td><td>Free SFT instruction datasets</td></tr>
+    </table>
+    <h4>Eval / observability</h4>
+    <table>
+      <tr><th>Tool</th><th>Free</th><th>Use</th></tr>
+      <tr><td><b>lm-eval-harness</b></td><td>OSS</td><td>Standard LLM benchmarks (HellaSwag, MMLU, GSM8K)</td></tr>
+      <tr><td><b>RAGAS</b></td><td>OSS</td><td>RAG faithfulness + relevance scoring</td></tr>
+      <tr><td><b>Langfuse</b></td><td>Free 50k traces/mo</td><td>LLM observability + prompt versioning</td></tr>
+      <tr><td><b>Helicone</b></td><td>Free 100k req/mo</td><td>Drop-in Claude proxy with logging</td></tr>
+      <tr><td><b>Phoenix (Arize)</b></td><td>OSS local</td><td>Eval + tracing notebook</td></tr>
+      <tr><td><b>Weights & Biases</b></td><td>Free for personal</td><td>Training run tracking</td></tr>
+    </table>
+    <h4>Tools / SDKs (all free / OSS)</h4>
+    <ul>
+      <li>HF transformers, peft, trl, accelerate, datasets</li>
+      <li>Karpathy nanoGPT, minbpe, llm.c (reference repos)</li>
+      <li>vLLM, TGI, llama.cpp, Ollama (serving)</li>
+      <li>TransformerLens, SAELens (interp)</li>
+      <li>LangChain, LlamaIndex, Haystack (orchestration — heavy, only when needed)</li>
+      <li>Anthropic Claude Agent SDK (official, free)</li>
+    </ul>
+    <h4>Suggested stacking for $0 learning</h4>
+    <ol>
+      <li><b>Phase 0-4</b>: local Python + free Kaggle for any GPU needs</li>
+      <li><b>Phase 5-6</b>: local CPU for BPE + tiny transformer training</li>
+      <li><b>Phase 7</b>: Phase 7 LITE locally → if needs cloud, $5 RunPod credit</li>
+      <li><b>Phase 8</b>: Kaggle / Colab free GPU for LoRA on small models</li>
+      <li><b>Phase 9</b>: Claude $5 signup + Groq/Gemini free tier for high-volume tests</li>
+      <li><b>Phase 10</b>: Qdrant local + sentence-transformers (free embeddings)</li>
+      <li><b>Phase 11</b>: same as Phase 9</li>
+      <li><b>Phase 12</b>: Railway hobby + Langfuse free + GitHub Actions free</li>
+      <li><b>Phase 13</b>: GitHub Pages + HF Hub (both free)</li>
+    </ol>
+    <div class="callout"><b>Total spend to complete the course:</b> $0-15 if you optimize. ~$5 Claude signup + maybe $10 cloud GPU for Phase 7 reproduction = max $15. Everything else fits in free tiers.</div>`},
     {h:"Cost engineering", body:`<h4>Token accounting</h4>
     <ul>
       <li>Log <code>(input_tokens, output_tokens, model, cached_tokens)</code> per request</li>

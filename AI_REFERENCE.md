@@ -1,6 +1,75 @@
 # AI Reference Companion
 
-Standalone reference. Glossary, interview question bank, decision trees, cheat sheets per phase. Use alongside `ai_master_course.html`.
+Standalone reference. Glossary, interview question bank, decision trees, cheat sheets per phase, free-tier catalog. Use alongside `ai_master_course.html`.
+
+---
+
+## 0. Free Tier Catalog (build for $0)
+
+### LLM APIs
+| Provider | Free | Models | Use |
+|---|---|---|---|
+| Anthropic | $5 signup credit | Opus 4.7 / Sonnet 4.6 / Haiku 4.5 | Course default |
+| Google Gemini | 1500 req/day free | Gemini 2.5 Flash/Pro | High-volume free |
+| Groq | Generous free | Llama 3.3 70B, Mixtral, DeepSeek-R1 distill | Ultra-fast (~500 tok/s) |
+| Together AI | $1 credit | Llama, Qwen, DeepSeek | Compare open models |
+| DeepSeek | $5 credit | V3, R1 reasoning | Cheap reasoning |
+| Mistral | Free Small/Codestral | Mistral family | EU data residency |
+| HuggingFace | ~30k chars/mo free | Any HF-hosted | Quick tests |
+| OpenRouter | `:free` models | Routes everything | One API key for all |
+| Cohere | Trial key | Command R/R+ | Free embeddings included |
+| Cerebras | Free Llama 3.3 | Llama | ~2000 tok/s |
+
+### Local LLMs (free forever)
+- **Ollama** — one-command 7B-30B on Mac/Win/Linux
+- **LM Studio** — GUI for GGUF models
+- **llama.cpp** — pure C++ CPU/GPU
+- **vLLM** — production serving on your GPU
+
+### Cloud compute
+| Provider | Free |
+|---|---|
+| Kaggle | 30 hrs/week T4/P100 |
+| Colab | Free T4 occasional |
+| RunPod | $5 signup, spot A100 ~$1/hr |
+| Lightning AI | 22 hrs/mo |
+| Modal | $30/mo compute credit |
+
+### Embeddings
+- **sentence-transformers** (local, free): all-MiniLM-L6-v2, bge-small-en
+- **Voyage AI** — 50M tokens free
+- **Cohere Embed** — trial generous
+
+### Vector DBs (free tier)
+- Qdrant (local Docker + Cloud 1GB free)
+- pgvector + Postgres (Railway/Supabase/Neon free)
+- Pinecone Starter (1 index, 100k vectors)
+- Chroma / LanceDB / Weaviate Sandbox
+
+### Deployment
+- Railway hobby ($5/mo credit)
+- Fly.io (3 small VMs free)
+- Render (750 hrs/mo, sleeps on idle)
+- Vercel hobby (unlimited static + serverless)
+- Cloudflare Workers (100k req/day)
+- HF Spaces (CPU free, paid GPU)
+- GitHub Pages (static, hosts this course)
+
+### Datasets (all free)
+HuggingFace Datasets · Kaggle · Common Crawl · FineWeb · The Pile · HH-RLHF · UltraChat · Alpaca · Tulu
+
+### Eval + observability
+- lm-eval-harness, RAGAS (OSS)
+- Langfuse (50k traces/mo free)
+- Helicone (100k req/mo free)
+- Phoenix Arize (OSS local)
+- W&B (personal free)
+
+### Tools (all free / OSS)
+HF transformers · peft · trl · accelerate · datasets · nanoGPT · minbpe · llm.c · vLLM · TGI · TransformerLens · SAELens · LangChain · LlamaIndex · Anthropic Claude Agent SDK
+
+### Total course spend
+**$0–15** if optimized. ~$5 Claude signup + maybe $10 cloud GPU for Phase 7. Everything else free.
 
 ---
 
