@@ -1056,26 +1056,7 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
       <label>FFN expand factor: <input id="pc-f" type="number" value="4" min="1" max="16" step="1" oninput="paramCalc()"></label>
       <div class="out" id="pc-out"></div>
     </div>
-    <p><b>Compare to real models:</b> GPT-2 small (d=768, n=12) ≈ 124M. GPT-2 medium (d=1024, n=24) ≈ 350M. Llama-3 8B (d=4096, n=32) ≈ 8B (uses GQA + tied embeddings, formula differs).</p>
-    <script>
-    function paramCalc(){
-      const d = +document.getElementById("pc-d").value;
-      const n = +document.getElementById("pc-n").value;
-      const v = +document.getElementById("pc-v").value;
-      const f = +document.getElementById("pc-f").value;
-      const perBlock = 4*d*d + 2*d*f*d;  // QKV 3d² + out d² + FFN 2·(d·fd)
-      const blockTotal = n * perBlock;
-      const emb = v * d;
-      const total = blockTotal + emb;
-      const fmt = x => x.toLocaleString();
-      document.getElementById("pc-out").innerHTML =
-        \`Per-block params: \${fmt(perBlock)}\\n\` +
-        \`All blocks (n=\${n}): \${fmt(blockTotal)}\\n\` +
-        \`Embedding table (vocab·d): \${fmt(emb)}\\n\` +
-        \`<b>Total: \${fmt(total)} (\${(total/1e6).toFixed(1)}M)</b>\`;
-    }
-    setTimeout(paramCalc, 100);
-    </script>`},
+    <p><b>Compare to real models:</b> GPT-2 small (d=768, n=12) ≈ 124M. GPT-2 medium (d=1024, n=24) ≈ 350M. Llama-3 8B (d=4096, n=32) ≈ 8B (uses GQA + tied embeddings, formula differs).</p>`},
     {h:"Common mistakes + interview prep", body:`<div class="mistake"><b>Common mistake #1:</b> using <code>mask = torch.ones(T,T)</code> as causal mask. ones means no mask. Need <code>torch.tril(torch.ones(T,T))</code>.</div>
     <div class="mistake"><b>Common mistake #2:</b> applying scale AFTER softmax. Wrong: <code>softmax(QK^T) / √d_k</code>. Right: <code>softmax(QK^T / √d_k)</code>.</div>
     <div class="mistake"><b>Common mistake #3:</b> forgetting <code>opt.zero_grad()</code> → gradients accumulate across steps → wrong updates.</div>
@@ -2240,6 +2221,7 @@ function renderPhase(){
       <button onclick="goPhase(${Math.min(COURSE.length-1,currentPhase+1)})" ${currentPhase===COURSE.length-1?'disabled':''}>Next →</button>
     </div>`;
   window.scrollTo({top:0,behavior:"smooth"});
+  setTimeout(()=>{ try{ paramCalc(); }catch(e){} }, 50);
 }
 
 function renderGames(){
@@ -2662,6 +2644,26 @@ function renderAttentionToy(){
     <div style="margin-top:10px;font-size:12px;color:var(--muted)">Each row sums to 100%. Try: row 0 = (10,0,0,0) → near one-hot. Increase d_k → softer attention. Causal: future positions zeroed.</div>
   </div>
   <div class="callout">Real transformers: d=64+ per head, learned Q/K projections from input, multi-head, 12-100+ layers. Same math.</div>`;
+}
+
+/* --------------------- INLINE LESSON WIDGETS --------------------- */
+function paramCalc(){
+  const dEl = document.getElementById("pc-d");
+  if(!dEl) return;
+  const d = +dEl.value;
+  const n = +document.getElementById("pc-n").value;
+  const v = +document.getElementById("pc-v").value;
+  const f = +document.getElementById("pc-f").value;
+  const perBlock = 4*d*d + 2*d*f*d;
+  const blockTotal = n * perBlock;
+  const emb = v * d;
+  const total = blockTotal + emb;
+  const fmt = x => x.toLocaleString();
+  document.getElementById("pc-out").innerHTML =
+    `Per-block params: ${fmt(perBlock)}<br>` +
+    `All blocks (n=${n}): ${fmt(blockTotal)}<br>` +
+    `Embedding table (vocab·d): ${fmt(emb)}<br>` +
+    `<b style="color:var(--gold)">Total: ${fmt(total)} (${(total/1e6).toFixed(1)}M)</b>`;
 }
 
 /* --------------------- GAME: GRADIENT DESCENT SIM --------------------- */
