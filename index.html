@@ -1619,13 +1619,151 @@ pip install -r requirements.txt</code></pre>
     {h:"Verify model IDs + pricing FIRST", body:`<div class="callout warn"><b>Always check current model IDs + prices</b> at <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank">docs.anthropic.com/models</a> and <a href="https://www.anthropic.com/pricing" target="_blank">anthropic.com/pricing</a>. Model IDs follow pattern <code>claude-{tier}-{major}-{minor}[-YYYYMMDD]</code>. As of 2026 this course uses Opus 4.7 / Sonnet 4.6 / Haiku 4.5 — if those 404, drop one minor version.</div>
     <p>Set a spend cap in Anthropic console → Settings → Limits BEFORE first agent run. Cost runaway is the #1 surprise.</p>`},
     {h:"SDK basics", code:`import anthropic\nclient = anthropic.Anthropic()\nresp = client.messages.create(\n    model="claude-opus-4-7",  # verify current ID at docs.anthropic.com\n    max_tokens=1024,\n    system="You are a concise senior engineer.",\n    messages=[{"role":"user","content":"Explain backprop in 3 sentences."}],\n)\nprint(resp.content[0].text)\nprint(resp.usage.input_tokens, resp.usage.output_tokens)\nprint(resp.stop_reason)  # "end_turn", "tool_use", "max_tokens", "stop_sequence"`},
-    {h:"Prompt engineering", body:`<ul>
-      <li><b>System prompt</b>: role + constraints + format</li>
-      <li><b>Few-shot</b>: 1-5 input/output pairs as user/assistant turns</li>
-      <li><b>Chain-of-thought</b>: 'think step by step' or extended thinking</li>
-      <li><b>Structured output</b>: tool use with JSON schema (most reliable)</li>
-      <li><b>Iterate</b>: build eval set (20-50) FIRST, then iterate prompts</li>
-    </ul>`},
+    {h:"🧠 Prompt Engineering Deep Dive (read this 3 times)", body:`<p><b>Prompt engineering is not magic incantations.</b> It is systematic communication with a probabilistic next-token predictor. You shape the probability distribution of next tokens by giving high-signal context.</p>
+    <h4>The 3-message anatomy</h4>
+    <table>
+      <tr><th>Role</th><th>What it sets</th><th>When to use</th></tr>
+      <tr><td><b>system</b></td><td>Persistent persona, rules, format constraints, knowledge that applies to ENTIRE conversation</td><td>Once per chat. Keep it stable across requests so prompt cache hits.</td></tr>
+      <tr><td><b>user</b></td><td>One turn of the task, dynamic per request</td><td>Each new query.</td></tr>
+      <tr><td><b>assistant</b></td><td>Model's prior responses; for few-shot, write fake assistant turns showing desired outputs</td><td>Few-shot examples; resuming chats.</td></tr>
+    </table>
+    <h4>System prompt structure (template that works)</h4>
+    <pre><code>You are [ROLE] working with [CONTEXT].
+
+Your job:
+1. [Primary task]
+2. [Secondary task]
+
+Constraints:
+- Always [behavior]
+- Never [forbidden behavior]
+- If [edge case], do [action]
+
+Output format:
+[Exact specification with example]
+
+Tone:
+[adjectives or example]</code></pre>
+    <h4>Zero-shot vs few-shot vs chain-of-thought</h4>
+    <ul>
+      <li><b>Zero-shot</b>: just ask. Works for tasks model has seen variants of in training. Try first because cheap.</li>
+      <li><b>Few-shot</b>: include 1-5 (input → output) examples as alternating user/assistant turns. Boosts accuracy massively on novel tasks.</li>
+      <li><b>Chain-of-thought (CoT)</b>: "Think step by step before answering." Forces model to allocate compute to reasoning before committing to a final answer. Use Claude's extended thinking mode for harder problems.</li>
+    </ul>
+    <h4>Few-shot — the correct way</h4>
+    <pre><code>messages = [
+    {"role": "user", "content": "Sentiment of: 'I love this!'"},
+    {"role": "assistant", "content": "positive"},
+    {"role": "user", "content": "Sentiment of: 'Worst day ever.'"},
+    {"role": "assistant", "content": "negative"},
+    {"role": "user", "content": "Sentiment of: 'It's okay I guess.'"},
+    {"role": "assistant", "content": "neutral"},
+    {"role": "user", "content": "Sentiment of: 'Decent service, slow food.'"},
+]</code></pre>
+    <p><b>Why this works:</b> the model sees the pattern (input format → exact output format) and pattern-matches your real query against it. Far more reliable than "respond with one of positive/negative/neutral."</p>
+    <h4>Output format control (highest leverage trick)</h4>
+    <pre><code>Output format (exactly):
+&lt;analysis&gt;
+[2-3 sentences of reasoning]
+&lt;/analysis&gt;
+&lt;answer&gt;
+[ONE word: yes or no]
+&lt;/answer&gt;
+
+NEVER add any text outside these tags.</code></pre>
+    <p>XML-style tags work great with Claude. For JSON, use <b>tool use</b> with input_schema for guaranteed validity.</p>
+    <h4>The 7 techniques in priority order</h4>
+    <ol>
+      <li><b>Be specific.</b> "Summarize" loses to "Summarize in 3 bullet points, each ≤15 words, focused on actions."</li>
+      <li><b>Show, don't tell.</b> One example > paragraph of rules.</li>
+      <li><b>Constrain output format.</b> XML tags, JSON schema, or numbered list.</li>
+      <li><b>Decompose multi-step tasks.</b> Either chain prompts or use clear numbered steps in one.</li>
+      <li><b>Allocate reasoning space.</b> "Think before answering" or extended thinking for hard problems.</li>
+      <li><b>Provide context.</b> Documents, examples, definitions injected into the prompt.</li>
+      <li><b>Iterate against evals.</b> Build a golden set, run variants, measure.</li>
+    </ol>
+    <h4>What NOT to do (antipatterns)</h4>
+    <ul>
+      <li><b>Politeness padding.</b> "Please if you don't mind..." wastes tokens, no quality gain.</li>
+      <li><b>Vague instructions.</b> "Be helpful and accurate" tells the model nothing it doesn't already do.</li>
+      <li><b>Negative-only instructions.</b> "Don't be wordy" leaves model guessing. Pair with positive: "Be terse. Max 50 words."</li>
+      <li><b>Mixing user input into the system prompt.</b> Prompt-injection vector. Keep untrusted text inside <code>&lt;user_query&gt;</code> tags within user message.</li>
+      <li><b>Asking model to count tokens or characters.</b> Models can't reliably count. Use code.</li>
+      <li><b>Long context for trivial queries.</b> Wastes money. Trim aggressively.</li>
+    </ul>
+    <h4>Claude-specific tips</h4>
+    <ul>
+      <li>Claude responds especially well to XML tags for structure</li>
+      <li>Use <b>extended thinking</b> for multi-step problems instead of writing CoT instructions manually</li>
+      <li>System prompts ARE separate parameter — never concatenate into user message</li>
+      <li>Frame legitimate sensitive requests with context (security testing, research) so Claude does not over-refuse</li>
+      <li>Use <code>tool_use</code> with input_schema for guaranteed structured output</li>
+    </ul>
+    <h4>Iteration workflow (the only way to actually improve prompts)</h4>
+    <ol>
+      <li>Write v1 prompt. Run on 5 hand-picked examples. Eyeball.</li>
+      <li>Expand to 20-50 golden examples covering edge cases.</li>
+      <li>Score: exact match where possible, LLM-as-judge otherwise.</li>
+      <li>Change ONE thing in prompt. Re-run all examples. Compare scores.</li>
+      <li>Keep changes that improve. Discard ones that don't.</li>
+      <li>Add new failures from production to golden set weekly.</li>
+    </ol>
+    <div class="callout"><b>Iron law:</b> if you change a prompt without re-running evals, you don't know if you helped or hurt. Most "prompt engineering" advice online is people optimizing on vibes.</div>`},
+    {h:"🔬 Code anatomy — every parameter in a Claude API call", body:`<p>You'll see this code shape 100+ times. Understand every parameter once, save hours of confusion later.</p>
+    <pre><code>resp = client.messages.create(
+    model="claude-opus-4-7",
+    max_tokens=1024,
+    system=[
+        {"type":"text","text":"You are a senior code reviewer."},
+        {"type":"text","text":LONG_STYLE_GUIDE,
+         "cache_control":{"type":"ephemeral"}},
+    ],
+    messages=[
+        {"role":"user","content":"Review this:\\n\`\`\`python\\n...\\n\`\`\`"},
+    ],
+    temperature=0.0,
+    top_p=0.9,
+    stop_sequences=["END_REVIEW"],
+    tools=[my_tool_schema],
+    tool_choice={"type":"auto"},
+    thinking={"type":"enabled","budget_tokens":4000},
+    stream=False,
+)</code></pre>
+    <h4>Parameter-by-parameter</h4>
+    <table>
+      <tr><th>Param</th><th>What it controls</th><th>When to tune</th></tr>
+      <tr><td><code>model</code></td><td>Which Claude. Affects quality, speed, $/token.</td><td>Opus for hard, Sonnet default, Haiku for bulk.</td></tr>
+      <tr><td><code>max_tokens</code></td><td>Hard cap on output length. Required.</td><td>Set tightly — protects against runaway cost on a bad prompt.</td></tr>
+      <tr><td><code>system</code></td><td>Role + rules + format. String OR list of content blocks for prompt caching.</td><td>Keep stable across calls so cache hits. Mark long stable text with <code>cache_control</code>.</td></tr>
+      <tr><td><code>messages</code></td><td>Conversation turns. Alternating user/assistant.</td><td>For multi-turn, append each turn. Strip old turns aggressively if context bloats.</td></tr>
+      <tr><td><code>temperature</code></td><td>Sampling randomness. 0 = near-deterministic (greedy top-token; minor non-determinism remains on tie-breaks / shard routing). 1 = standard. Up to 2 = wild.</td><td>0 for structured/code/math/eval. 0.3-0.7 for chat. 0.7-1.0 for brainstorm.</td></tr>
+      <tr><td><code>top_p</code></td><td>Nucleus sampling. Sample from top tokens whose cumulative prob exceeds p.</td><td>Leave default 1.0. Don't combine with temperature changes.</td></tr>
+      <tr><td><code>stop_sequences</code></td><td>List of strings that halt generation when produced.</td><td>For agent loops with custom END tokens or to enforce format.</td></tr>
+      <tr><td><code>tools</code></td><td>List of tool definitions the model can call.</td><td>Phase 11 agent work. name + description + input_schema.</td></tr>
+      <tr><td><code>tool_choice</code></td><td>auto / any / tool name</td><td>"any" forces a tool call. "tool" forces a specific tool. "auto" lets model decide.</td></tr>
+      <tr><td><code>thinking</code></td><td>{type:"enabled", budget_tokens:N}</td><td>Hard reasoning. Model thinks privately before answering.</td></tr>
+      <tr><td><code>stream</code></td><td>True → SSE chunks</td><td>For chat UIs so user sees tokens as generated.</td></tr>
+    </table>
+    <h4>Response object — what you get back</h4>
+    <pre><code>resp.id              # unique request id
+resp.model           # which model actually answered
+resp.role            # "assistant"
+resp.content         # LIST of content blocks
+resp.content[0].type # "text" | "thinking" | "tool_use"
+resp.content[0].text # actual answer text (if type == "text")
+resp.stop_reason     # "end_turn" | "max_tokens" | "tool_use" | "stop_sequence"
+resp.usage.input_tokens                # tokens you sent
+resp.usage.output_tokens               # tokens generated
+resp.usage.cache_creation_input_tokens # one-time cache write (full price)
+resp.usage.cache_read_input_tokens     # cache hits (~10% price)</code></pre>
+    <p><b>Always log usage.</b> Cost runaway is the silent killer. Sum these into your observability per request.</p>
+    <h4>How to run it</h4>
+    <pre><code>uv pip install anthropic
+setx ANTHROPIC_API_KEY "sk-ant-..."   # close + reopen PowerShell
+python your_script.py</code></pre>
+    <p><b>If you get AuthenticationError</b> → env var not set in current shell. <code>echo $env:ANTHROPIC_API_KEY</code> should print the key.</p>
+    <p><b>If you get model_not_found</b> → model ID changed. Check <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank">docs.anthropic.com/models</a>.</p>
+    <p><b>If you get overloaded_error (529)</b> → transient. Retry with exponential backoff (1s, 2s, 4s, 8s). For latency-critical, fall back to Sonnet/Haiku.</p>`},
     {h:"Prompt caching (Anthropic feature, huge cost saver)", code:`resp = client.messages.create(\n    model="claude-opus-4-7",\n    max_tokens=1024,\n    system=[\n        {"type":"text","text":"You are a code reviewer."},\n        {"type":"text","text":LONG_STYLE_GUIDE,\n         "cache_control":{"type":"ephemeral"}},\n    ],\n    messages=[{"role":"user","content":user_code}],\n)\n# Subsequent calls = 90% cheaper input`},
     {h:"Tool use", code:`tools = [{\n  "name":"get_weather",\n  "description":"Get current weather for a city",\n  "input_schema":{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}\n}]\n\nresp = client.messages.create(\n    model="claude-opus-4-7",\n    max_tokens=1024,\n    tools=tools,\n    messages=[{"role":"user","content":"Weather in Tokyo?"}],\n)\nfor blk in resp.content:\n    if blk.type == "tool_use":\n        result = my_weather_fn(blk.input["city"])\n        followup = client.messages.create(\n            model="claude-opus-4-7", max_tokens=1024, tools=tools,\n            messages=[\n                {"role":"user","content":"Weather in Tokyo?"},\n                {"role":"assistant","content":resp.content},\n                {"role":"user","content":[\n                    {"type":"tool_result","tool_use_id":blk.id,"content":result}]},\n            ],\n        )\n        print(followup.content[-1].text)`},
     {h:"Multi-turn tool loop (production pattern)", body:"<p>Production tool use handles multiple tool calls per response, errors, and loop until end_turn.</p>", code:`def chat_with_tools(user_msg, tools, exec_tool, max_turns=10):\n    messages = [{"role":"user","content":user_msg}]\n    for _ in range(max_turns):\n        resp = client.messages.create(\n            model="claude-sonnet-4-6", max_tokens=2048,\n            tools=tools, messages=messages,\n        )\n        if resp.stop_reason == "end_turn":\n            return next((b.text for b in resp.content if b.type=="text"), "")\n        if resp.stop_reason == "max_tokens":\n            return "[truncated]"\n        # tool_use\n        messages.append({"role":"assistant","content":resp.content})\n        results = []\n        for b in resp.content:\n            if b.type == "tool_use":\n                try:\n                    out = exec_tool(b.name, b.input)\n                    results.append({"type":"tool_result","tool_use_id":b.id,"content":str(out)[:4000]})\n                except Exception as e:\n                    results.append({"type":"tool_result","tool_use_id":b.id,\n                                    "content":f"ERROR: {e}","is_error":True})\n        messages.append({"role":"user","content":results})\n    return "max turns reached"`},
