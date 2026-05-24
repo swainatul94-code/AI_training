@@ -1470,6 +1470,107 @@ target role]. Constraints: [time, money]. What do I do this month?</code></pre>
       <li>Cross-check important claims (Claude can be confidently wrong)</li>
       <li>Use Opus for hard problems, Sonnet for daily, Haiku for quick lookups</li>
     </ol></div>`},
+    {h:"🚂 Deploy to Railway (your hobby plan setup)", body:`<p>Railway runs your Claude-powered FastAPI app behind HTTPS, auto-deploys on every git push, manages env secrets, attaches Postgres/Redis with one click. Hobby plan = $5/mo credit, enough for 2-3 small apps.</p>
+    <h4>What Railway handles for you</h4>
+    <ul>
+      <li>HTTPS + custom domain auto</li>
+      <li>Auto-deploy from GitHub on every push</li>
+      <li>Environment variables UI (no .env in repo)</li>
+      <li>Logs streaming + restart-on-failure</li>
+      <li>Managed add-ons: Postgres (with pgvector), Redis, MySQL</li>
+      <li>Sleep idle apps to save credit</li>
+    </ul>
+    <h4>What Railway can NOT do (hobby)</h4>
+    <ul>
+      <li>No GPU instances — for vLLM self-hosting open LLMs, use RunPod/Modal</li>
+      <li>RAM caps around 8GB — fine for Claude API proxies, not for loading 7B local models</li>
+    </ul>
+    <h4>Step-by-step: deploy your first Claude app</h4>
+    <ol>
+      <li>Push your app to GitHub (you already have <code>AI_training</code> repo)</li>
+      <li>railway.app → New Project → "Deploy from GitHub repo"</li>
+      <li>Pick the repo + folder (e.g. <code>/phase9-cli-tool</code> if subdirectory)</li>
+      <li>Railway auto-detects Python → installs <code>requirements.txt</code></li>
+      <li>Settings → Variables → add <code>ANTHROPIC_API_KEY</code> = sk-ant-... and <code>APP_KEYS</code> = mysecret1,mysecret2</li>
+      <li>Settings → Deploy → set Start Command: <code>uvicorn app:app --host 0.0.0.0 --port $PORT</code></li>
+      <li>Settings → Networking → Generate Domain → get <code>yourapp.up.railway.app</code></li>
+      <li>Test: <code>curl https://yourapp.up.railway.app/</code></li>
+    </ol>
+    <h4>Minimal Railway-ready FastAPI</h4>
+    <pre><code># app.py
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel
+import anthropic, os
+
+app = FastAPI()
+client = anthropic.Anthropic()
+KEYS = set(os.getenv("APP_KEYS", "").split(","))
+
+class Q(BaseModel):
+    question: str
+
+@app.get("/")
+def health():
+    return {"ok": True, "model": "claude-sonnet-4-6"}
+
+@app.post("/ask")
+def ask(q: Q, x_api_key: str = Header(None)):
+    if x_api_key not in KEYS:
+        raise HTTPException(401, "bad key")
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": q.question}],
+    )
+    return {"answer": resp.content[0].text,
+            "tokens_in": resp.usage.input_tokens,
+            "tokens_out": resp.usage.output_tokens}
+</code></pre>
+    <pre><code># requirements.txt
+fastapi
+uvicorn[standard]
+anthropic
+pydantic
+</code></pre>
+    <pre><code># railway.json (optional, explicit config)
+{
+  "deploy": {
+    "startCommand": "uvicorn app:app --host 0.0.0.0 --port $PORT",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
+    "healthcheckPath": "/"
+  }
+}
+</code></pre>
+    <h4>Test the deployed app</h4>
+    <pre><code># From your laptop:
+curl -X POST https://yourapp.up.railway.app/ask \\
+  -H "Content-Type: application/json" \\
+  -H "X-Api-Key: mysecret1" \\
+  -d '{"question": "Explain quantum tunneling in 2 sentences"}'
+</code></pre>
+    <h4>Cost watch</h4>
+    <table>
+      <tr><th>Workload</th><th>Roughly costs</th></tr>
+      <tr><td>FastAPI Claude proxy, idle</td><td>~$0.30/mo</td></tr>
+      <tr><td>Same + 100 req/day</td><td>~$1/mo (Claude API extra)</td></tr>
+      <tr><td>Postgres add-on, idle</td><td>~$2/mo</td></tr>
+      <tr><td>RAG app + Qdrant Cloud free tier</td><td>~$1.50/mo</td></tr>
+    </table>
+    <p><b>Hobby plan = $5/mo credit.</b> Easily fits 2-3 small apps. Sleeping unused apps saves credit. Anthropic API charges separately on your Anthropic billing.</p>
+    <h4>Add Postgres + pgvector (for Phase 10 RAG)</h4>
+    <ol>
+      <li>Project dashboard → New → Database → PostgreSQL</li>
+      <li>Connect to your service → Railway injects <code>DATABASE_URL</code> env var</li>
+      <li>In code: <code>psycopg2.connect(os.getenv("DATABASE_URL"))</code></li>
+      <li>Enable pgvector: <code>CREATE EXTENSION IF NOT EXISTS vector;</code></li>
+    </ol>
+    <h4>Watch out</h4>
+    <div class="mistake"><b>Mistake:</b> committing <code>ANTHROPIC_API_KEY</code> to <code>.env</code> in repo. Railway ignores it anyway, but anyone reading your public repo sees the key. <b>Fix:</b> add <code>.env</code> to <code>.gitignore</code>, set vars only in Railway dashboard.</div>
+    <div class="mistake"><b>Mistake:</b> binding to <code>localhost</code> or fixed port instead of <code>0.0.0.0:$PORT</code>. Railway routes to whatever <code>$PORT</code> says — hardcoding breaks deploy.</div>
+    <div class="mistake"><b>Mistake:</b> running expensive Claude calls on health-check pings. Make <code>/</code> return static JSON; only call Claude on real endpoints.</div>
+    <h4>Portability</h4>
+    <p>The same <code>app.py</code> + <code>requirements.txt</code> deploys without changes to Fly.io, Render, Modal, Cloud Run. Railway uses a standard Dockerfile under the hood. Easy to switch if you outgrow hobby tier.</p>`},
     {h:"Cost engineering", body:`<h4>Token accounting</h4>
     <ul>
       <li>Log <code>(input_tokens, output_tokens, model, cached_tokens)</code> per request</li>
