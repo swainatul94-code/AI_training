@@ -131,8 +131,16 @@ hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 .portfolio-row .check.unchecked{background:var(--panel2);color:var(--muted)}
 /* badges */
 .badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:12px}
-.badge-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;opacity:.4;transition:all .2s}
+.badge-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;opacity:.4;transition:all .2s;position:relative}
 .badge-card.earned{opacity:1;border-color:var(--gold);background:linear-gradient(180deg,var(--panel),rgba(255,209,102,.08))}
+.badge-card.tier-bronze.earned{border-color:#cd7f32;background:linear-gradient(180deg,var(--panel),rgba(205,127,50,.10))}
+.badge-card.tier-silver.earned{border-color:#c0c0c0;background:linear-gradient(180deg,var(--panel),rgba(192,192,192,.10))}
+.badge-card.tier-gold.earned{border-color:#ffd166;background:linear-gradient(180deg,var(--panel),rgba(255,209,102,.12))}
+.badge-card .tier-tag{position:absolute;top:6px;right:8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.badge-card.earned.tier-bronze .tier-tag{color:#cd7f32}
+.badge-card.earned.tier-silver .tier-tag{color:#c0c0c0}
+.badge-card.earned.tier-gold .tier-tag{color:#ffd166}
+.streak-banner{background:linear-gradient(90deg,rgba(255,107,107,.15),rgba(255,181,71,.15));border:1px solid var(--err);color:var(--ink);padding:8px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;gap:8px}
 .badge-card .icon{font-size:38px;margin-bottom:6px}
 .badge-card h4{margin:4px 0;color:var(--gold)}
 .badge-card p{font-size:11px;color:var(--muted);margin:0}
@@ -193,7 +201,10 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
     </div>
     <div style="margin-top:10px;font-size:11px;color:var(--muted)">Progress auto-saves to browser. Export JSON for backup.</div>
   </aside>
-  <main id="main" role="main"></main>
+  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+    <div id="streak-banner" class="streak-banner" style="display:none;margin:14px 40px 0 40px" role="status" aria-live="polite"></div>
+    <main id="main" role="main"></main>
+  </div>
 </div>
 </div>
 <div id="main-content" tabindex="-1" class="sr-only">main content landmark</div>
@@ -441,6 +452,72 @@ def test_add_param(a, b, expected):
   ],
   project:{title:"Phase 0.5 deliverable", steps:["Write 5 pytest tests for a small Python module","Create a class with constructor + 3 methods","Push to AI_training repo under /python_basics/"]}
 },
+{ id:15, title:"Phase 0.75 — Ship your first AI app (30 min win)", est:"30-60 min",
+  intro:"You did Phase 0 (env) and Phase 0.5 (Python basics). Before the math wall, ship something that uses Claude. Win early, get hooked.",
+  lessons:[
+    {h:"Why this phase exists", body:`<p>Most beginners quit between Phase 0.5 (Python) and Phase 1 (Math). 25-40 hours of math with no working product is a motivation cliff.</p>
+    <p>This 30-min phase puts a working Claude-powered app in your GitHub. You'll feel real progress before the abstract part.</p>
+    <p><b>Hard rule:</b> ship publicly today. Don't perfect it.</p>`},
+    {h:"Build: AI Joke Generator (30 min)", body:`<p>A CLI tool that asks Claude for a joke on any topic, in any style.</p>
+    <h4>Step 1 — Create file</h4>
+    <p>In your <code>AI_training</code> folder, create <code>joker.py</code>:</p>`, code:`import anthropic, sys
+
+client = anthropic.Anthropic()
+
+def joke(topic: str, style: str = "dad joke") -> str:
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",  # cheap, fast for jokes
+        max_tokens=200,
+        system="You are a professional comedian. Reply with ONLY the joke. No setup like 'here's a joke'.",
+        messages=[{"role": "user", "content": f"Tell me one {style} about {topic}."}],
+    )
+    return resp.content[0].text
+
+if __name__ == "__main__":
+    topic = " ".join(sys.argv[1:]) or "Python programming"
+    print(joke(topic))`},
+    {h:"Step 2 — Run it", body:`<p>From PowerShell in your repo folder:</p>`, code:`python joker.py
+python joker.py cats
+python joker.py "rubber duck debugging"
+
+# Customize style:
+# Edit joker.py to accept style arg, then:
+# python joker.py "machine learning" knock-knock`},
+    {h:"Step 3 — Push to GitHub", code:`git add joker.py
+git commit -m "feat: AI joke generator (Phase 0.75)"
+git push`},
+    {h:"Step 4 — Brag (the real point)", body:`<p>Post the funniest output to X/LinkedIn/Discord with one line: <i>"My first AI app — built today."</i></p>
+    <p>Tag the repo URL. This is your portfolio's first entry. Real proof you can ship.</p>
+    <p><b>Reactions you'll get:</b> people will assume you've been at this longer than 2 days. Use that energy to tackle Phase 1 math tomorrow.</p>`},
+    {h:"Stretch (optional 30 min more)", body:`<ul>
+      <li>Wrap in FastAPI, deploy to Railway → public URL anyone can hit (see Phase 9 lesson on Railway deploys)</li>
+      <li>Add <code>--style</code> CLI flag (knock-knock, observational, dark, wholesome)</li>
+      <li>Save every joke to <code>jokes.txt</code> so you can build a dataset later</li>
+      <li>Add a Discord webhook to post jokes to a channel daily</li>
+    </ul>`},
+  ],
+  quiz:[
+    {type:"mcq", q:"Why use Haiku here instead of Opus?", options:[
+      "Opus doesn't tell jokes",
+      "Haiku is ~15× cheaper and quality is fine for short creative output. Match model tier to task difficulty.",
+      "Opus requires more API key permissions",
+      "It's random"
+    ], answer:1, explain:"Always pick the cheapest model that meets quality bar. Jokes are easy; Haiku nails them. Reserve Opus for hard reasoning."},
+    {type:"mcq", q:"What does <code>system=</code> do in messages.create?", options:[
+      "Logs to stdout",
+      "Sets the model's role/persona for the conversation (the 'who you are' prompt)",
+      "Sets the OS",
+      "Required by Anthropic API"
+    ], answer:1, explain:"System prompt steers behavior across all turns. Put role + constraints + format there. Keep user messages as the actual task."},
+    {type:"short", q:"You ran your joker.py and got a 'AuthenticationError'. What's the most likely fix?", model:"API key not set in env vars. Check: echo $env:ANTHROPIC_API_KEY (PowerShell). If empty, you forgot setx + reopen shell from Phase 0. Re-run setx, close + reopen terminal, then retry.", rubric:["env var missing","setx + reopen","Phase 0 step"]},
+  ],
+  project:{title:"Phase 0.75 deliverable", steps:[
+    "joker.py works locally, prints a joke",
+    "Pushed to AI_training repo with descriptive commit",
+    "Posted ONE output publicly (X, LinkedIn, Discord, or even just to a friend)",
+    "(Stretch) wrapped in FastAPI and deployed to Railway"
+  ]}
+},
 { id:2, title:"Phase 1 — Math Foundations", est:"25-40 hrs",
   intro:"Can't debug LLMs without linear algebra + gradients + probability. Skip = stuck at Phase 6. This phase uses analogies + numeric examples; don't memorize formulas, build intuition.",
   lessons:[
@@ -526,31 +603,67 @@ def cosine(a, b):
 
 print(cosine(a, c))  # ~0.998 — very similar
 print(cosine(a, b))  # ~0.766 — less similar`},
-    {h:"Transpose, determinant, eigenvectors, SVD (when you need each)", body:`<p>Four more concepts. Don't memorize, just know what they mean when you hit them later.</p>
-    <h4>Transpose Aᵀ</h4>
-    <p>Flips rows and columns. Shape (m, n) → (n, m). Used everywhere — most famously in attention's <code>Q K^T</code>.</p>
-    <pre><code>A  = [[1, 2, 3]]      # shape (1, 3)
-A.T = [[1], [2], [3]] # shape (3, 1)</code></pre>
-    <h4>Determinant</h4>
-    <p>Single number that says "how much does this matrix scale volume?". If <code>det(A) = 0</code>, the transformation squishes a dimension flat → not invertible. Useful for understanding when an operation loses information.</p>
-    <h4>Eigenvectors</h4>
-    <p>Special vectors that a matrix only <b>scales</b>, never rotates: <code>A · v = λ · v</code>. λ (lambda) is the eigenvalue — how much it scales.</p>
-    <p>Intuition: if A is a rotation, most vectors rotate. But the axis of rotation doesn't. That axis = eigenvector. λ = 1 (no scaling).</p>
-    <p>Used in PCA (find directions of most variance), stability analysis, graph algorithms.</p>
-    <h4>SVD — Singular Value Decomposition</h4>
-    <p>Every matrix can be decomposed into: <b>rotate → scale → rotate</b>. SVD gives you those three matrices.</p>
-    <p><code>A = U · Σ · Vᵀ</code>  where U, V are rotations and Σ is diagonal (scale factors called singular values).</p>
-    <p><b>This is the math behind LoRA.</b> If only the top-r singular values matter, you can approximate A with rank-r update → way fewer parameters. That's how LoRA fine-tunes 7B models on a laptop.</p>`, code:`import numpy as np
-A = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 10]])
+    {h:"Transpose — the simplest matrix operation", body:`<p>Transpose <code>Aᵀ</code> flips rows and columns. A matrix of shape (m, n) becomes (n, m). That's it.</p>
+    <pre><code>A   = [[1, 2, 3]]      # shape (1, 3) — a row vector
 
-print(A.T)                # transpose
-print(np.linalg.det(A))   # scalar volume scale
+A.T = [[1],
+       [2],
+       [3]]             # shape (3, 1) — a column vector</code></pre>
+    <p><b>Where you'll see it constantly:</b></p>
+    <ul>
+      <li>Attention math: <code>Q · Kᵀ</code> (compute scores between every query and every key)</li>
+      <li>Convert column-vector to row-vector (and back)</li>
+      <li>Whenever shape doesn't match for matmul</li>
+    </ul>`, code:`import numpy as np
+A = np.array([[1, 2, 3], [4, 5, 6]])  # shape (2, 3)
+print(A.shape)        # (2, 3)
+print(A.T.shape)      # (3, 2)
+print(A.T)            # rows become cols`},
+    {h:"Determinant — does this transform crush a dimension?", body:`<p>The determinant is a single number that says <b>"how much does this matrix scale volume?"</b></p>
+    <ul>
+      <li><code>det(A) = 2</code> → transformation doubles areas/volumes</li>
+      <li><code>det(A) = -1</code> → transformation flips orientation but preserves size</li>
+      <li><code>det(A) = 0</code> → transformation collapses something flat → information is LOST → matrix is NOT invertible</li>
+    </ul>
+    <p><b>When you'll care:</b> a matrix with det=0 is "singular" — you can't undo what it did. In ML this means linear systems can't be solved, regression breaks, etc.</p>`, code:`import numpy as np
 
-vals, vecs = np.linalg.eig(A)   # eigenvalues + eigenvectors
-print("eigenvalues:", vals)
+# A normal invertible matrix
+A = np.array([[1, 2], [3, 5]])
+print(np.linalg.det(A))   # -1.0 (not zero → invertible)
 
-U, S, Vt = np.linalg.svd(A)
-print("singular values:", S)    # important values; small ones can be dropped`},
+# A singular matrix (rows are dependent: row2 = 2*row1)
+B = np.array([[1, 2], [2, 4]])
+print(np.linalg.det(B))   # 0.0 (collapse → no inverse)`},
+    {h:"Eigenvectors — directions that don't rotate", body:`<p>Most vectors, when multiplied by a matrix A, get rotated AND scaled. Eigenvectors are special: A only SCALES them, never rotates them.</p>
+    <span class="formula">A · v = λ · v       (λ is the eigenvalue: how much v gets scaled)</span>
+    <p><b>Intuition:</b> if A is a rotation around an axis, the axis itself doesn't rotate. That axis = an eigenvector with λ=1 (no scaling).</p>
+    <p><b>Where you'll meet this:</b></p>
+    <ul>
+      <li><b>PCA</b> (principal component analysis): eigenvectors of the covariance matrix = directions of most variance in your data. Used for dimensionality reduction.</li>
+      <li><b>Stability analysis</b>: in training dynamics, eigenvalues > 1 mean things explode.</li>
+      <li><b>Graph algorithms</b> like PageRank.</li>
+    </ul>`, code:`import numpy as np
+A = np.array([[2, 0], [0, 3]])   # diagonal: just scales x by 2, y by 3
+vals, vecs = np.linalg.eig(A)
+print("eigenvalues:", vals)       # [2, 3]
+print("eigenvectors:\\n", vecs)   # [[1,0],[0,1]] — the x and y axes`},
+    {h:"SVD — the universal matrix factorization (math behind LoRA)", body:`<p>Every matrix A can be decomposed into <b>three steps: rotate → scale → rotate</b>:</p>
+    <span class="formula">A = U · Σ · Vᵀ</span>
+    <ul>
+      <li><b>U, V</b>: rotation matrices</li>
+      <li><b>Σ</b>: diagonal matrix of "singular values" (scaling factors), sorted big → small</li>
+    </ul>
+    <p><b>The killer insight:</b> the small singular values often contribute little. If you keep only the top-r singular values (set others to 0), you get a great low-rank approximation of A with far fewer numbers.</p>
+    <p><b>This IS the math behind LoRA</b> (Phase 8). A fine-tuning weight update ΔW has approximately low rank → represent it as <code>(α/r)·B·A</code> with tiny B, A → ~100× fewer trainable parameters than full fine-tuning.</p>
+    <p><b>You won't compute SVD by hand.</b> Just remember: "every matrix = rotate, scale, rotate. Small scales can be dropped."</p>`, code:`import numpy as np
+A = np.random.randn(100, 50)
+U, S, Vt = np.linalg.svd(A, full_matrices=False)
+print("singular values shape:", S.shape)  # (50,)
+print("biggest:", S[0], "smallest:", S[-1])
+# Approximating A with top-10 singular values:
+r = 10
+A_approx = U[:, :r] @ np.diag(S[:r]) @ Vt[:r, :]
+print("reconstruction error:", np.linalg.norm(A - A_approx))`},
     {h:"Derivatives — the slope of a function", body:`<details class="try"><summary>🎯 Try first: f(x) = 5x. What's the slope?</summary><div class="ans">Answer: <b>5</b>. A straight line of slope 5 has derivative = 5 everywhere. (Rule: derivative of c·x is c.)</div></details>
     <p><b>What a derivative is:</b> the slope of a function at a specific point. If <code>f(x) = x²</code>, then <code>f'(x) = 2x</code> — at x=3, slope is 6.</p>
     <p><b>Why ML cares:</b> we have a <b>loss function</b> measuring how wrong the model is. We want to find parameter values where the loss is minimum. Derivatives tell us which direction (and how much) to move parameters to reduce loss.</p>
@@ -1122,6 +1235,45 @@ output_for_"sat" = 0.25 * V[0] + 0.25 * V[1] + 0.50 * V[2]
 { id:8, title:"Phase 7 — Pretrain Small LLM", est:"40-60 hrs",
   intro:"Reproduce GPT-2 (or smaller). This is the phase that converts you from \"reads about LLMs\" to \"trains LLMs\". Karpathy has reproduced GPT-2 124M for ~$10 of cloud compute — you can too.",
   lessons:[
+    {h:"🪶 Phase 7 LITE — train a tiny GPT locally in 20 minutes (do this FIRST)", body:`<p>Before you rent a GPU, train a tiny model on your own laptop. This proves your pipeline works AND you ship something the same day.</p>
+    <h4>Goal</h4>
+    <ul>
+      <li>~1M parameter GPT on Tiny Shakespeare (1MB text)</li>
+      <li>Runs in 15-25 min on CPU, ~5 min on any consumer GPU</li>
+      <li>Generates recognizably Shakespearean text by the end</li>
+      <li>Zero cloud spend</li>
+    </ul>
+    <h4>The shortest possible setup</h4>
+    <pre><code>git clone https://github.com/karpathy/nanoGPT
+cd nanoGPT
+pip install torch numpy transformers datasets tiktoken wandb tqdm
+python data/shakespeare_char/prepare.py
+python train.py config/train_shakespeare_char.py \\
+  --device=cpu \\
+  --compile=False \\
+  --eval_iters=20 \\
+  --log_interval=1 \\
+  --block_size=64 \\
+  --batch_size=12 \\
+  --n_layer=4 \\
+  --n_head=4 \\
+  --n_embd=128 \\
+  --max_iters=2000 \\
+  --lr_decay_iters=2000 \\
+  --dropout=0.0
+# Use --device=cuda or --device=mps if you have GPU/Apple Silicon</code></pre>
+    <h4>Generate samples</h4>
+    <pre><code>python sample.py --out_dir=out-shakespeare-char --device=cpu</code></pre>
+    <h4>What you'll see</h4>
+    <p>Step 0: random gibberish like "JqK;rzWf:". Step 500: vaguely word-shaped. Step 2000: real-looking Old English with names, dialog tags, even rough iambic rhythm. You will laugh out loud.</p>
+    <h4>Why this matters</h4>
+    <ol>
+      <li><b>Confidence builder.</b> You trained a real GPT. Today.</li>
+      <li><b>Pipeline validated.</b> When you scale up to FineWeb on cloud GPU, you already know the loop works.</li>
+      <li><b>Failure mode catalog.</b> See what NaN looks like, what under-training looks like, what convergence looks like — at zero cost.</li>
+      <li><b>Eval baseline.</b> Now you have a reference loss curve to compare against bigger runs.</li>
+    </ol>
+    <div class="callout"><b>Hard rule:</b> do Phase 7 Lite BEFORE renting a GPU. If your local 1M model doesn't converge, your 124M cloud model definitely won't — and you'll have spent $10 finding out.</div>`},
     {h:"What pretraining actually is", body:`<p><b>Pretraining</b> = take a freshly initialized transformer (random weights), feed it billions of web tokens, and train it to predict the next token. After enough data + compute, you get a model that "knows things" — language, facts, basic reasoning.</p>
     <p><b>The objective is dumb:</b> just minimize cross-entropy on next-token prediction. No labels, no human supervision. The "intelligence" emerges from the model trying to compress patterns in the data.</p>
     <p><b>Why this works:</b> to predict next tokens well, the model has to learn grammar, world facts, math, code patterns — everything. Predicting next-word in "The capital of France is ___" requires knowing world facts.</p>
@@ -2564,22 +2716,24 @@ const GAMES = [
 ];
 
 /* ============================== BADGES ============================== */
+// tier: bronze=100xp, silver=200xp, gold=300xp
 const BADGES = [
-  {id:"first-steps", icon:"👣", name:"First Steps", desc:"Complete Phase 0", check:s=>s.phases[0]?.complete},
-  {id:"tester-bridge", icon:"🧪", name:"QA Crosses Over", desc:"Complete Phase 0.5 (Coding for Testers)", check:s=>s.phases[1]?.complete},
-  {id:"math-slayer", icon:"🧮", name:"Math Slayer", desc:"Complete Phase 1 (math foundations)", check:s=>s.phases[2]?.complete},
-  {id:"tensor-tamer", icon:"🔢", name:"Tensor Tamer", desc:"Complete Phase 2 (numpy/pandas)", check:s=>s.phases[3]?.complete},
-  {id:"ml-classic", icon:"🌳", name:"ML Classicist", desc:"Complete Phase 3 (classical ML)", check:s=>s.phases[4]?.complete},
-  {id:"deep-diver", icon:"🧠", name:"Deep Diver", desc:"Complete Phase 4 (deep learning)", check:s=>s.phases[5]?.complete},
-  {id:"tokenizer", icon:"🔤", name:"Tokenizer", desc:"Complete Phase 5 (NLP basics)", check:s=>s.phases[6]?.complete},
-  {id:"attn-master", icon:"⚡", name:"Attention Master", desc:"Complete Phase 6 (transformers from scratch)", check:s=>s.phases[7]?.complete},
-  {id:"pretrainer", icon:"🏗️", name:"Pretrainer", desc:"Complete Phase 7 (pretrain LLM)", check:s=>s.phases[8]?.complete},
-  {id:"aligner", icon:"🎯", name:"Aligner", desc:"Complete Phase 8 (fine-tune + DPO)", check:s=>s.phases[9]?.complete},
-  {id:"claude-pilot", icon:"🛸", name:"Claude Pilot", desc:"Complete Phase 9 (Claude API apps)", check:s=>s.phases[10]?.complete},
-  {id:"rag-builder", icon:"📚", name:"RAG Builder", desc:"Complete Phase 10 (RAG)", check:s=>s.phases[11]?.complete},
-  {id:"agent-smith", icon:"🤖", name:"Agent Architect", desc:"Complete Phase 11 (agents)", check:s=>s.phases[12]?.complete},
-  {id:"shipper", icon:"🚀", name:"Shipper", desc:"Complete Phase 12 (MLOps + deployment)", check:s=>s.phases[13]?.complete},
-  {id:"researcher", icon:"📖", name:"Researcher", desc:"Complete Phase 13 (papers + portfolio)", check:s=>s.phases[14]?.complete},
+  {id:"first-steps", icon:"👣", tier:"bronze", name:"First Steps", desc:"Complete Phase 0 (Setup)", check:s=>s.phases[0]?.complete},
+  {id:"tester-bridge", icon:"🐍", tier:"bronze", name:"Pythonista", desc:"Complete Phase 0.5 (Python Basics)", check:s=>s.phases[1]?.complete},
+  {id:"first-ship", icon:"🎉", tier:"bronze", name:"First Ship", desc:"Complete Phase 0.75 (Your first AI app)", check:s=>s.phases[15]?.complete},
+  {id:"math-slayer", icon:"🧮", tier:"gold", name:"Math Slayer", desc:"Complete Phase 1 (math foundations)", check:s=>s.phases[2]?.complete},
+  {id:"tensor-tamer", icon:"🔢", tier:"silver", name:"Tensor Tamer", desc:"Complete Phase 2 (numpy/pandas)", check:s=>s.phases[3]?.complete},
+  {id:"ml-classic", icon:"🌳", tier:"silver", name:"ML Classicist", desc:"Complete Phase 3 (classical ML)", check:s=>s.phases[4]?.complete},
+  {id:"deep-diver", icon:"🧠", tier:"gold", name:"Deep Diver", desc:"Complete Phase 4 (deep learning)", check:s=>s.phases[5]?.complete},
+  {id:"tokenizer", icon:"🔤", tier:"silver", name:"Tokenizer", desc:"Complete Phase 5 (NLP basics)", check:s=>s.phases[6]?.complete},
+  {id:"attn-master", icon:"⚡", tier:"gold", name:"Attention Master", desc:"Complete Phase 6 (transformers from scratch)", check:s=>s.phases[7]?.complete},
+  {id:"pretrainer", icon:"🏗️", tier:"gold", name:"Pretrainer", desc:"Complete Phase 7 (pretrain LLM)", check:s=>s.phases[8]?.complete},
+  {id:"aligner", icon:"🎯", tier:"gold", name:"Aligner", desc:"Complete Phase 8 (fine-tune + DPO)", check:s=>s.phases[9]?.complete},
+  {id:"claude-pilot", icon:"🛸", tier:"silver", name:"Claude Pilot", desc:"Complete Phase 9 (Claude API apps)", check:s=>s.phases[10]?.complete},
+  {id:"rag-builder", icon:"📚", tier:"silver", name:"RAG Builder", desc:"Complete Phase 10 (RAG)", check:s=>s.phases[11]?.complete},
+  {id:"agent-smith", icon:"🤖", tier:"gold", name:"Agent Architect", desc:"Complete Phase 11 (agents)", check:s=>s.phases[12]?.complete},
+  {id:"shipper", icon:"🚀", tier:"silver", name:"Shipper", desc:"Complete Phase 12 (MLOps + deployment)", check:s=>s.phases[13]?.complete},
+  {id:"researcher", icon:"📖", tier:"silver", name:"Researcher", desc:"Complete Phase 13 (papers + portfolio)", check:s=>s.phases[14]?.complete},
   {id:"all-phases", icon:"👑", name:"Zero to Hero", desc:"Complete ALL phases", check:s=>Object.values(s.phases).every(p=>p.complete)},
   {id:"quiz-master", icon:"💯", name:"Quiz Master", desc:"Score 100% on any phase quiz", check:s=>Object.entries(s.phases).some(([id,p])=>{
     const phase = COURSE.find(c=>c.id==id); if(!phase) return false;
@@ -2734,6 +2888,7 @@ function xpTotalForLevel(L){
 }
 function addXP(amount, reason){
   state.xp += amount;
+  state.lastXpDay = dayKey(new Date());
   // level up?
   while(state.xp >= xpTotalForLevel(state.level+1)){
     state.level++;
@@ -2743,6 +2898,20 @@ function addXP(amount, reason){
   xpPop(`+${amount} XP${reason?" · "+reason:""}`);
   refreshHeader();
   refreshBadges();
+  paintStreakBanner();
+}
+function paintStreakBanner(){
+  const el = document.getElementById("streak-banner");
+  if(!el) return;
+  const today = dayKey(new Date());
+  const streak = state.streak || 0;
+  const earnedToday = state.lastXpDay === today;
+  if(streak >= 2 && !earnedToday){
+    el.style.display = "flex";
+    el.innerHTML = `🔥 Streak: <b>${streak} days</b> — earn ANY XP today to keep it alive. (Mark a lesson complete, answer a quiz, or play a game.)`;
+  } else {
+    el.style.display = "none";
+  }
 }
 function dayKey(d){ return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()}`; }
 function updateStreak(){
@@ -2796,9 +2965,11 @@ function refreshBadges(){
         newly.push(b);
       }
     });
+    const tierXP = {bronze:100, silver:200, gold:300};
     newly.forEach(b=>{
-      state.xp += 100;
-      xpPop(`🏆 ${b.name} (+100 XP)`);
+      const award = tierXP[b.tier] || 100;
+      state.xp += award;
+      xpPop(`🏆 ${b.name} (+${award} XP)`);
     });
     recomputeLevel();
     saveProgress();
@@ -3499,11 +3670,16 @@ function renderBadges(){
       <div class="kpi"><div class="v">${state.streak||0}</div><div class="l">🔥 Day streak</div></div>
     </div>
     <div class="badge-grid">
-      ${earned.map(b=>`<div class="badge-card ${b.earned?'earned':''}">
-        <div class="icon">${b.icon}</div>
-        <h4>${escapeHtml(b.name)}</h4>
-        <p>${escapeHtml(b.desc)}</p>
-      </div>`).join("")}
+      ${earned.map(b=>{
+        const tier = b.tier || "";
+        const tierClass = tier ? `tier-${tier}` : "";
+        return `<div class="badge-card ${b.earned?'earned':''} ${tierClass}">
+          ${tier?`<span class="tier-tag">${tier}</span>`:""}
+          <div class="icon">${b.icon}</div>
+          <h4>${escapeHtml(b.name)}</h4>
+          <p>${escapeHtml(b.desc)}</p>
+        </div>`;
+      }).join("")}
     </div>`;
 }
 
@@ -3568,7 +3744,7 @@ function markComplete(passed){
 }
 
 /* --------------------- BOOT --------------------- */
-function render(){ renderSidebar(); renderMain(); refreshHeader(); }
+function render(){ renderSidebar(); renderMain(); refreshHeader(); paintStreakBanner(); }
 updateStreak();
 refreshBadges();
 render();
