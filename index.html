@@ -3357,9 +3357,14 @@ document.querySelectorAll('.demo-tab').forEach(t=>{
     const k = t.dataset.demo;
     document.querySelectorAll('.demo-tab').forEach(x=>x.classList.toggle('active', x===t));
     document.querySelectorAll('.demo-panel').forEach(p=>p.classList.toggle('active', p.id==='demo-'+k));
-    if (k==='nn') nnDraw();
-    if (k==='gd') gdDraw();
-    if (k==='att') renderAttention();
+    // Canvases need a fresh measure after their panel becomes visible.
+    // dispatch a resize so internal IIFE handlers re-measure clientWidth + redraw.
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+      if (k==='nn' && window.nnDraw) window.nnDraw();
+      if (k==='gd' && window.gdDraw) window.gdDraw();
+      if (k==='att') renderAttention();
+    });
   });
 });
 

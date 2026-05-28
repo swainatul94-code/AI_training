@@ -82,10 +82,70 @@ h4{font-size:15px;margin-top:16px;color:var(--accent2);font-weight:700;letter-sp
 p{margin:8px 0}
 code,pre,kbd{font-family:'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-ligatures:contextual}
 code{background:linear-gradient(180deg,rgba(255,209,102,.08),rgba(255,209,102,.04));padding:2px 6px;border-radius:5px;font-size:12.5px;color:#ffdb8a;border:1px solid rgba(255,209,102,.12)}
-pre{background:linear-gradient(180deg,#0a1020,#070c1a);border:1px solid var(--border);border-radius:var(--rad);padding:16px;overflow:auto;font-size:13px;line-height:1.55;position:relative;box-shadow:var(--shadow-sm)}
-pre code{background:none;border:none;padding:0;color:#d3dcef}
+pre{background:linear-gradient(180deg,#0a1020,#070c1a);border:1px solid var(--border);border-radius:var(--rad);padding:16px;overflow-x:auto;overflow-y:hidden;font-size:13px;line-height:1.6;position:relative;box-shadow:var(--shadow-sm);scrollbar-width:thin}
+pre::-webkit-scrollbar{height:8px}
+pre::-webkit-scrollbar-track{background:rgba(255,255,255,.02);border-radius:0 0 var(--rad) var(--rad)}
+pre::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+pre::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+pre code{background:none;border:none;padding:0;color:#d3dcef;white-space:pre}
 pre .copy{position:absolute;top:8px;right:8px;background:rgba(28,36,56,.85);color:var(--muted);border:1px solid var(--border);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all var(--t-fast);font-family:'Inter',sans-serif;font-weight:600}
 pre .copy:hover{color:var(--ink);border-color:var(--accent);background:rgba(38,48,74,.95)}
+pre .copy.copied{color:var(--ok);border-color:var(--ok);background:rgba(62,207,142,.15)}
+/* Token highlights inside code */
+pre .kw{color:#ff9ad9;font-weight:600}
+pre .str{color:#ffd166}
+pre .num{color:#7ad4ff}
+pre .com{color:#7884a0;font-style:italic}
+pre .fn{color:#7aa2ff}
+/* Step-card lesson layout */
+.step-card{
+  position:relative;
+  background:linear-gradient(180deg,var(--panel) 0%,rgba(20,26,42,.6) 100%);
+  border:1px solid var(--border-soft);border-radius:var(--rad);
+  padding:22px 22px 22px 70px;margin:16px 0;
+  box-shadow:var(--shadow-sm);transition:border-color var(--t-base);
+}
+.step-card:hover{border-color:var(--border)}
+.step-card > .step-num{
+  position:absolute;top:20px;left:16px;
+  width:38px;height:38px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-weight:700;font-size:15px;
+  display:grid;place-items:center;
+  font-family:'JetBrains Mono','Fira Code',monospace;
+  box-shadow:0 4px 12px rgba(122,162,255,.35);
+}
+.step-card h3{
+  margin:0 0 10px;font-size:18px;font-weight:700;
+  color:var(--accent2);background:none;-webkit-text-fill-color:initial;
+  background-clip:initial;-webkit-background-clip:initial;
+}
+.step-card > .body{font-size:14.5px;line-height:1.7;color:var(--ink);margin-bottom:10px}
+.step-card > .body p{margin:6px 0}
+.step-card > .body b,.step-card > .body strong{color:var(--accent)}
+.code-block{
+  margin-top:12px;border:1px solid var(--border);border-radius:var(--rad);
+  overflow:hidden;background:linear-gradient(180deg,#0a1020,#070c1a);
+}
+.code-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;background:rgba(255,255,255,.03);
+  border-bottom:1px solid var(--border-soft);
+}
+.code-head .lang{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  color:var(--accent);letter-spacing:.05em;text-transform:uppercase;
+  padding:2px 8px;border-radius:4px;background:rgba(122,162,255,.1);
+  border:1px solid rgba(122,162,255,.2);
+}
+.code-block pre{
+  border:none;border-radius:0;box-shadow:none;margin:0;padding:14px 16px;
+}
+.code-block .copy{position:relative;top:auto;right:auto}
+@media(max-width:600px){
+  .step-card{padding:18px 16px 16px 56px}
+  .step-card > .step-num{left:12px;width:30px;height:30px;font-size:13px;top:18px}
+}
 .card{background:linear-gradient(180deg,var(--panel) 0%,rgba(20,26,42,.6) 100%);border:1px solid var(--border-soft);border-radius:var(--rad);padding:18px;margin:14px 0;box-shadow:var(--shadow-sm);transition:all var(--t-base)}
 .card:hover{border-color:var(--border)}
 .tag{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(28,36,56,.6);color:var(--muted);font-size:11px;margin-right:6px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border-soft)}
@@ -3721,12 +3781,25 @@ function renderMain(){
 function renderPhase(){
   const p = COURSE[currentPhase];
   const ps = state.phases[p.id];
-  const lessons = p.lessons.map((l,i)=>`
-    <section id="lesson-${i}" class="card">
+  const lessons = p.lessons.map((l,i)=>{
+    const num = i + 1;
+    const codeBlock = l.code
+      ? `<div class="code-block">
+           <div class="code-head">
+             <span class="lang">${detectLang(l.code)}</span>
+             <button class="copy" onclick="copyPre(this)">Copy</button>
+           </div>
+           <pre><code>${highlightLegacy(l.code)}</code></pre>
+         </div>`
+      : '';
+    return `
+    <section id="lesson-${i}" class="step-card">
+      <div class="step-num">${num}</div>
       <h3>${escapeHtml(l.h)}</h3>
-      ${l.body||""}
-      ${l.code? `<pre><button class="copy" onclick="copyPre(this)">copy</button><code>${escapeHtml(l.code)}</code></pre>` : ""}
-    </section>`).join("");
+      <div class="body">${l.body||""}</div>
+      ${codeBlock}
+    </section>`;
+  }).join("");
   const toc = `<div class="lesson-toc">${p.lessons.map((l,i)=>`<a href="#lesson-${i}">${escapeHtml(l.h)}</a>`).join("")}</div>`;
   const quizHtml = p.quiz.map((q,i)=>{
     const saved = ps.quiz[i] || {};
@@ -4744,9 +4817,48 @@ function renderBadges(){
 function goPhase(i){ currentPhase = i; renderSidebar(); renderMain(); closeDrawer(); }
 function goGame(i){ currentGame = i; matchState=null; orderState=null; bugState=null; flashState=null; renderSidebar(); renderMain(); closeDrawer(); }
 function copyPre(btn){
-  const code = btn.parentElement.querySelector("code").innerText;
+  const root = btn.closest(".code-block") || btn.parentElement;
+  const code = root.querySelector("code").innerText;
   navigator.clipboard.writeText(code);
-  btn.innerText="copied"; setTimeout(()=>btn.innerText="copy", 900);
+  const orig = btn.innerText;
+  btn.innerText = "✓ Copied"; btn.classList.add("copied");
+  setTimeout(()=>{ btn.innerText = orig || "Copy"; btn.classList.remove("copied"); }, 1200);
+}
+function detectLang(code){
+  const c = String(code).trim();
+  if (/^(\$\s|>\s|python\s|pip\s|uv\s|git\s|cd\s|ls\s|mkdir\s|setx\s|export\s|cat\s|echo\s|curl\s|winget\s|docker\s|kubectl\s|npm\s|node\s)/m.test(c)) return "bash";
+  if (/^#\s|^#!\/bin\/(?:bash|sh)|^(?:set|if|then|fi|for|while|do|done)\b/m.test(c)) return "bash";
+  if (/^(?:import|from|def|class|async|await|with|try|except|raise|print|return|yield)\b/m.test(c)) return "python";
+  if (/\bfunction\b|\bconst\b|\blet\b|\bvar\b|=>/.test(c)) return "javascript";
+  if (/^\{[\s\S]*\}\s*$/.test(c)) return "json";
+  if (/^SELECT|^INSERT|^UPDATE|^DELETE|^CREATE/im.test(c)) return "sql";
+  return "code";
+}
+function highlightLegacy(code){
+  const lang = detectLang(code);
+  let s = String(code)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  // comments
+  if (lang === "python" || lang === "bash" || lang === "javascript") {
+    s = s.replace(/(^|\n)([^\n]*?)(#[^\n]*)/g, (_,p,pre,com) => `${p}${pre}<span class="com">${com}</span>`);
+  }
+  if (lang === "javascript") {
+    s = s.replace(/(\/\/[^\n]*)/g, '<span class="com">$1</span>');
+  }
+  // strings (after escaping, quotes are entities)
+  s = s.replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;|&#39;(?:[^&]|&(?!#39;))*?&#39;)/g, '<span class="str">$1</span>');
+  // keywords
+  if (lang === "python") {
+    s = s.replace(/\b(import|from|def|class|return|if|elif|else|for|while|in|as|with|try|except|finally|lambda|self|None|True|False|and|or|not|yield|raise|pass|break|continue|async|await|is)\b/g, '<span class="kw">$1</span>');
+  } else if (lang === "bash") {
+    s = s.replace(/\b(if|then|else|elif|fi|for|do|done|while|case|esac|export|set|cd|echo|source|return|exit|function)\b/g, '<span class="kw">$1</span>');
+  } else if (lang === "javascript") {
+    s = s.replace(/\b(function|const|let|var|return|if|else|for|while|in|of|new|class|extends|async|await|try|catch|throw|true|false|null|undefined|this)\b/g, '<span class="kw">$1</span>');
+  }
+  // numbers
+  s = s.replace(/\b(\d+\.?\d*)\b/g, '<span class="num">$1</span>');
+  return s;
 }
 async function submitMCQ(i, correctIdx){
   const sel = document.querySelector(`input[name="q${i}"]:checked`);
