@@ -845,6 +845,51 @@ section.block{
   font-size:14px;
 }
 
+/* ============ Lesson page mode (opened in new tab) ============ */
+body.mode-lesson .nav,
+body.mode-lesson .scroll-progress,
+body.mode-lesson .hero,
+body.mode-lesson .resume-banner,
+body.mode-lesson section.block,
+body.mode-lesson .cta-final,
+body.mode-lesson footer{display:none !important}
+body.mode-lesson{padding-top:0}
+body.mode-lesson .modal-bg{
+  position:static;background:transparent;backdrop-filter:none;
+  padding:24px;min-height:100vh;
+  animation:none;
+}
+body.mode-lesson .modal-bg.open{display:flex}
+body.mode-lesson .modal{
+  max-width:980px;max-height:none;
+  box-shadow:var(--shadow-lg);
+  background:linear-gradient(180deg,rgba(20,26,42,.85),rgba(14,18,30,.95));
+  animation:fade-up .6s var(--ease-out);
+}
+body.mode-lesson .modal-close,
+body.mode-lesson .btn-modal-close-alt{display:none}
+body.mode-lesson .modal-tabs{top:8px}
+.lesson-page-bar{
+  display:none;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  background:rgba(7,9,18,.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:30;
+}
+body.mode-lesson .lesson-page-bar{display:flex}
+.lesson-page-bar .back{
+  display:inline-flex;align-items:center;gap:8px;
+  color:var(--muted);font-weight:600;font-size:14px;
+  padding:8px 16px;border-radius:99px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  transition:all var(--t-fast);
+}
+.lesson-page-bar .back:hover{color:var(--ink);background:rgba(255,255,255,.08);text-decoration:none}
+.lesson-page-bar .brand-mini{
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;
+  background:var(--grad-text);-webkit-background-clip:text;background-clip:text;color:transparent;
+}
+
 /* ============ Command palette ============ */
 .palette-bg{
   position:fixed;inset:0;z-index:200;
@@ -1203,6 +1248,11 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
 <body>
 
 <div class="scroll-progress" id="scroll-progress"></div>
+
+<div class="lesson-page-bar">
+  <a href="./" class="back">← Back to roadmap</a>
+  <span class="brand-mini">AI Zero → Hero</span>
+</div>
 
 <div class="resume-banner" id="resumeBanner" role="alert" aria-live="polite">
   <div class="resume-banner-inner">
@@ -2357,7 +2407,9 @@ function openPhase(n){
   wireModal(n);
   if (hasGame) mountGame(n, deep.game);
   modalBg.classList.add('open');
-  document.body.style.overflow = 'hidden';
+  if (!document.body.classList.contains('mode-lesson')) {
+    document.body.style.overflow = 'hidden';
+  }
   updateQuizScore(n);
 }
 function wireModal(n){
@@ -2998,13 +3050,18 @@ function updateQuizScore(n){
   el.innerHTML = `Score: <b>${correct} / ${total}</b>${answered<total?` <span style="color:var(--dim)">· ${total-answered} left</span>`:' · 🎉 done'}`;
 }
 function closeModal(){
+  if (document.body.classList.contains('mode-lesson')) return; // can't close in standalone-page mode
   teardownGame();
   modalBg.classList.remove('open');
   document.body.style.overflow = '';
 }
 modalClose.addEventListener('click', closeModal);
-modalBg.addEventListener('click', e => { if (e.target === modalBg) closeModal(); });
+modalBg.addEventListener('click', e => {
+  if (document.body.classList.contains('mode-lesson')) return;
+  if (e.target === modalBg) closeModal();
+});
 document.addEventListener('keydown', e => {
+  if (document.body.classList.contains('mode-lesson')) return;
   if (e.key === 'Escape' && modalBg.classList.contains('open')) closeModal();
 });
 
@@ -3143,7 +3200,7 @@ function renderPhases(){
             <input type="checkbox" data-phase-check="${p.n}" ${done?'checked':''}>
             <span class="lbl">Mark complete</span>
           </label>
-          ${PHASE_DEEP[p.n] ? `<button class="btn-open-lesson" data-open-phase="${p.n}">Open lesson <span>→</span></button>` : ''}
+          ${PHASE_DEEP[p.n] ? `<a class="btn-open-lesson" href="?lesson=${p.n}" target="_blank" rel="noopener">Open lesson <span>↗</span></a>` : ''}
         </div>
       </div>
       <div class="phase-num">${p.n}</div>
@@ -3817,6 +3874,18 @@ renderAttention();
 // Init progress + streak UI now that nav DOM exists
 updateProgressRing();
 updateStreakUI();
+
+// Full-page lesson mode: ?lesson=N opens a phase as a standalone page (new-tab UX)
+(function(){
+  const params = new URLSearchParams(location.search);
+  const ls = params.get('lesson');
+  if (ls === null) return;
+  const n = parseInt(ls, 10);
+  if (!Number.isFinite(n) || !PHASE_DEEP[n]) return;
+  document.body.classList.add('mode-lesson');
+  document.title = `Phase ${n} — ${(PHASES.find(p=>p.n===n)||{}).name||'Lesson'} · AI Zero → Hero`;
+  openPhase(n);
+})();
 
 console.log('%cAI Zero → Hero','color:#7aa2ff;font-size:18px;font-weight:bold;font-family:Space Grotesk');
 console.log('%c⌘K (Ctrl+K) — search everything','color:#7aa2ff');
