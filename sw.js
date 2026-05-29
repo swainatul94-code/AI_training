@@ -1,19 +1,30 @@
 // Cache-first service worker for AI Zero → Hero
 // Single-file site, so we just cache the shell + assets and serve offline.
-const VERSION = 'aizh-v1';
-const ASSETS = [
+const VERSION = 'aizh-v3';
+// Critical = shell that MUST cache atomically, or install fails and old SW keeps serving.
+const CRITICAL = [
   './',
   './index.html',
+  './styles.css',
+  './manifest.webmanifest',
+];
+// Optional = nice-to-have, allowed to fail individually.
+const OPTIONAL = [
   './ai_master_course.html',
   './AI_REFERENCE.md',
   './AI_ZERO_TO_HERO.md',
-  './manifest.webmanifest',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(VERSION).then(c => c.addAll(ASSETS).catch(() => {}))
-  );
+  e.waitUntil((async () => {
+    const cache = await caches.open(VERSION);
+    // Fail loud on critical: any failure aborts install, prior cache stays live.
+    await cache.addAll(CRITICAL);
+    // Optional: cache best-effort, one at a time, never block activation.
+    await Promise.all(OPTIONAL.map(u =>
+      cache.add(u).catch(err => console.warn('[sw] optional precache miss:', u, err))
+    ));
+  })());
   self.skipWaiting();
 });
 
