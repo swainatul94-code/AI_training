@@ -1,0 +1,13 @@
+{
+  "name": "AI Zero → Hero",
+  "short_name": "AI Zero→Hero",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070912",
+  "theme_color": "#0a0e16",
+  "description": "Learn AI from zero to hero - animated roadmap, interactive demos, free forever.",
+  "categories": ["education", "productivity"],
+  "icons": []
+}

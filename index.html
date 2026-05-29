@@ -6,6 +6,10 @@
 <title>AI Zero → Hero · Learn AI from Curious Beginner to Pro Engineer</title>
 <meta name="description" content="The most fun way to learn AI. From 'what is a neuron' to building, training, and deploying real LLMs. Interactive demos, animated roadmap, zero fluff.">
 <meta name="theme-color" content="#0a0e16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AI Zero→Hero">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -641,6 +645,38 @@ section.block{
 }
 .modal-body .pro-detail.show{display:block}
 .modal-body .pro-detail b{color:var(--accent2)}
+.modal-body .pro-toggle.eli5-toggle{
+  background:rgba(94,194,255,.1);border-color:rgba(94,194,255,.3);color:var(--accent3);
+  margin-right:8px;
+}
+.modal-body .pro-toggle.eli5-toggle:hover{background:rgba(94,194,255,.18)}
+.modal-body .eli5-detail{
+  background:rgba(94,194,255,.06);border-color:rgba(94,194,255,.2);
+}
+.modal-body .eli5-detail b{color:var(--accent3)}
+.callout-block{
+  margin:18px 0;padding:14px 18px;border-radius:10px;
+  background:rgba(255,255,255,.02);border:1px solid var(--border);
+}
+.callout-block h4{
+  margin:0 0 10px;font-size:13.5px;font-weight:700;
+  letter-spacing:.04em;text-transform:uppercase;
+  display:flex;align-items:center;gap:8px;
+}
+.callout-block.pitfalls{background:rgba(255,107,107,.05);border-color:rgba(255,107,107,.25)}
+.callout-block.pitfalls h4{color:var(--err)}
+.callout-block.rubric{background:rgba(62,207,142,.05);border-color:rgba(62,207,142,.25)}
+.callout-block.rubric h4{color:var(--ok)}
+.callout-block ul{list-style:none;padding:0;margin:0}
+.callout-block li{
+  font-size:14px;line-height:1.6;color:var(--ink);
+  padding:6px 0 6px 22px;position:relative;
+}
+.callout-block li::before{
+  position:absolute;left:0;top:6px;font-size:14px;
+}
+.callout-block.pitfalls li::before{content:"⚠";color:var(--err)}
+.callout-block.rubric li::before{content:"✓";color:var(--ok);font-weight:700}
 
 /* Code block w/ pseudo-highlight + copy */
 .codeblock{
@@ -966,6 +1002,42 @@ body.mode-lesson .lesson-page-bar{display:flex}
   font-size:10px;color:var(--ink);
 }
 @media(min-width:1000px){.kbd-trigger{display:inline-flex}}
+
+/* ============ First-visit tour ============ */
+.tour-bg{
+  position:fixed;inset:0;z-index:120;
+  background:rgba(7,9,18,.78);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+  animation:fade-in .2s var(--ease-out);
+}
+.tour-bg.open{display:flex}
+.tour-card{
+  width:100%;max-width:440px;
+  background:linear-gradient(180deg,rgba(20,26,42,.98),rgba(14,18,30,.99));
+  border:1px solid var(--border-strong);border-radius:16px;
+  padding:28px;
+  box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(122,162,255,.15);
+  animation:modal-in .3s var(--ease-out);
+}
+.tour-card h3{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin-bottom:12px;letter-spacing:-.01em}
+.tour-card p{color:var(--muted);font-size:15px;line-height:1.65;margin-bottom:18px}
+.tour-card kbd{
+  background:rgba(255,255,255,.08);border:1px solid var(--border);
+  border-radius:5px;padding:2px 8px;font-family:'JetBrains Mono',monospace;
+  font-size:12px;color:var(--ink);font-weight:600;
+}
+.tour-dots{display:flex;gap:6px;justify-content:center;margin:18px 0}
+.tour-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15)}
+.tour-dots span.active{background:var(--accent)}
+.tour-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.tour-actions button{
+  padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;
+  font-family:inherit;transition:all var(--t-fast);
+}
+.tour-actions .skip{background:transparent;color:var(--muted)}
+.tour-actions .skip:hover{color:var(--ink)}
+.tour-actions .next{background:var(--grad-primary);color:#fff;border:none;box-shadow:0 4px 12px rgba(122,162,255,.3)}
+.tour-actions .next:hover{transform:translateY(-1px)}
 
 /* ============ Confetti canvas ============ */
 #confetti{
@@ -1305,7 +1377,7 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
 
 <!-- ======= HERO ======= -->
 <section class="hero" id="top">
-  <canvas id="hero-canvas"></canvas>
+  <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-content">
     <div class="hero-badge"><span class="dot"></span> Updated for 2026 · Claude 4.7 · Free forever</div>
     <h1>Learn AI. <br><span class="shimmer">From zero to hero.</span></h1>
@@ -1386,6 +1458,10 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
         <button class="demo-tab" data-demo="tok"><span class="ico">✂️</span> Tokenizer</button>
         <button class="demo-tab" data-demo="att"><span class="ico">🔦</span> Attention</button>
         <button class="demo-tab" data-demo="gd"><span class="ico">⛰️</span> Gradient Descent</button>
+        <button class="demo-tab" data-demo="ln"><span class="ico">📊</span> LayerNorm</button>
+        <button class="demo-tab" data-demo="emb"><span class="ico">🧭</span> Embedding</button>
+        <button class="demo-tab" data-demo="temp"><span class="ico">🌡️</span> Sampling</button>
+        <button class="demo-tab" data-demo="beam"><span class="ico">🎋</span> Beam Search</button>
       </div>
 
       <!-- NN Playground -->
@@ -1395,7 +1471,7 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
           <p>A network is just neurons in layers, multiplying inputs by weights and squashing the result. Hit <b>Forward Pass</b> to watch signal flow. Hover any neuron to see its activation.</p>
         </div>
         <div class="demo-canvas-wrap">
-          <canvas id="nn-canvas"></canvas>
+          <canvas id="nn-canvas" role="img" aria-label="Animated neural network with 2 input neurons, 5 hidden, 5 hidden, 1 output. Drag inputs to change activations."></canvas>
         </div>
         <div class="demo-controls">
           <button class="demo-btn" id="nn-forward">▶ Forward Pass</button>
@@ -1455,7 +1531,7 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
           <h3>Gradient Descent — Rolling Downhill</h3>
           <p>Training a model = finding the lowest point on a loss surface. The ball rolls in the direction the slope points. Big <b>learning rate</b> = bigger steps (but risk overshoot). Watch it converge.</p>
         </div>
-        <div class="demo-canvas-wrap"><canvas id="gd-canvas"></canvas></div>
+        <div class="demo-canvas-wrap"><canvas id="gd-canvas" role="img" aria-label="Gradient descent loss surface with contour map and rolling ball"></canvas></div>
         <div class="demo-controls">
           <button class="demo-btn" id="gd-train">▶ Train</button>
           <button class="demo-btn alt" id="gd-reset">↻ Reset</button>
@@ -1474,6 +1550,70 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
           <span>Iter <b id="gd-iter">0</b></span>
           <span>Loss <b id="gd-loss">—</b></span>
           <span>Position <b id="gd-pos">(—, —)</b></span>
+        </div>
+      </div>
+
+      <!-- LayerNorm -->
+      <div class="demo-panel" id="demo-ln">
+        <div class="demo-head">
+          <h3>LayerNorm — bringing values back to a sane scale</h3>
+          <p>Normalize a vector so it has zero mean + unit variance, then re-scale with learnable γ/β. Drag the raw bars or randomize, watch the normalized output stay tight.</p>
+        </div>
+        <div class="demo-canvas-wrap"><canvas id="ln-canvas" style="height:300px;width:100%;display:block" aria-label="LayerNorm visualizer"></canvas></div>
+        <div class="demo-controls">
+          <button class="demo-btn" id="ln-rand">🎲 Randomize input</button>
+          <div class="demo-slider"><label>γ (scale)</label><input type="range" id="ln-g" min="0.2" max="3" step="0.1" value="1"><span class="val" id="ln-gv">1.0</span></div>
+          <div class="demo-slider"><label>β (shift)</label><input type="range" id="ln-b" min="-2" max="2" step="0.1" value="0"><span class="val" id="ln-bv">0.0</span></div>
+        </div>
+        <div class="gd-stats">
+          <span>μ <b id="ln-mu">—</b></span>
+          <span>σ <b id="ln-sig">—</b></span>
+          <span>‖x‖ <b id="ln-n">—</b></span>
+        </div>
+      </div>
+
+      <!-- Embedding lookup -->
+      <div class="demo-panel" id="demo-emb">
+        <div class="demo-head">
+          <h3>Embeddings — words turn into vectors</h3>
+          <p>Type a word from the small fixed vocabulary. See its (toy) embedding vector + its 3 nearest neighbours by cosine similarity. Real embeddings are 768–1024 dims; this is 16.</p>
+        </div>
+        <input type="text" id="emb-input" placeholder="try: king, queen, paris, code, train…" autocomplete="off" spellcheck="false" style="width:100%;padding:12px 16px;background:rgba(7,9,18,.6);border:1px solid var(--border);border-radius:10px;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:14px">
+        <div id="emb-out" style="margin-top:14px"></div>
+      </div>
+
+      <!-- Temperature / sampling -->
+      <div class="demo-panel" id="demo-temp">
+        <div class="demo-head">
+          <h3>Temperature & Top-p — how randomness becomes a knob</h3>
+          <p>Logits are the model's raw scores for each next-token candidate. Temperature flattens or sharpens the distribution. Top-p truncates the long tail. Watch the bars react.</p>
+        </div>
+        <div class="demo-canvas-wrap"><canvas id="temp-canvas" style="height:280px;width:100%;display:block" aria-label="Temperature distribution"></canvas></div>
+        <div class="demo-controls">
+          <div class="demo-slider"><label>Temperature</label><input type="range" id="temp-t" min="0.05" max="2.5" step="0.05" value="1"><span class="val" id="temp-tv">1.0</span></div>
+          <div class="demo-slider"><label>Top-p</label><input type="range" id="temp-p" min="0.1" max="1" step="0.05" value="1"><span class="val" id="temp-pv">1.0</span></div>
+          <button class="demo-btn" id="temp-sample">🎲 Sample 100</button>
+        </div>
+        <div class="gd-stats">
+          <span>kept tokens <b id="temp-k">—</b></span>
+          <span>entropy <b id="temp-h">—</b></span>
+        </div>
+      </div>
+
+      <!-- Beam search -->
+      <div class="demo-panel" id="demo-beam">
+        <div class="demo-head">
+          <h3>Beam search vs greedy decode</h3>
+          <p>Greedy = always take the top-1 token. Beam = keep top-k candidate sequences. See how beam can find a globally better sequence even when the greedy token at step 1 is locally cheapest.</p>
+        </div>
+        <div class="demo-canvas-wrap"><canvas id="beam-canvas" style="height:340px;width:100%;display:block" aria-label="Beam search tree"></canvas></div>
+        <div class="demo-controls">
+          <div class="demo-slider"><label>Beam width</label><input type="range" id="beam-k" min="1" max="5" step="1" value="2"><span class="val" id="beam-kv">2</span></div>
+          <button class="demo-btn" id="beam-go">▸ Decode</button>
+        </div>
+        <div class="gd-stats">
+          <span>Best sequence <b id="beam-out">—</b></span>
+          <span>log p <b id="beam-lp">—</b></span>
         </div>
       </div>
     </div>
@@ -1563,6 +1703,18 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
       <span><kbd>↑↓</kbd> navigate</span>
       <span><kbd>↵</kbd> open</span>
       <span><kbd>esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<div class="tour-bg" id="tourBg" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+  <div class="tour-card">
+    <h3 id="tourTitle"></h3>
+    <p id="tourBody"></p>
+    <div class="tour-dots" id="tourDots"></div>
+    <div class="tour-actions">
+      <button class="skip" id="tourSkip">Skip tour</button>
+      <button class="next" id="tourNext">Next</button>
     </div>
   </div>
 </div>
@@ -2062,6 +2214,89 @@ const PHASE_DEEP = {
   },
 };
 
+/* ===== Per-phase add-on content: ELI5 toggle, pitfalls, mastery rubric, more games ===== */
+const PHASE_EXTRA = {
+  0: {
+    eli5:"Plug everything in. Make Claude say 'hi' through code. Push to GitHub. That's the whole phase.",
+    pitfalls:["Setting the API key only for the current PowerShell session — use <code>setx</code> + reopen the shell", "Forgetting to <code>git init</code> the repo before first commit", "Mixing system Python and uv-managed Python — pick one"],
+    rubric:["Claude API call returns a real response (not an auth error)", "Repo exists on GitHub with at least one commit", "<code>uv</code> and <code>python --version</code> both work from a fresh shell"],
+    game:{type:"setup"},
+  },
+  1: {
+    eli5:"Vectors are arrows. Gradient = which way is downhill. Backprop = chain rule, applied everywhere.",
+    pitfalls:["Spending months on math before writing any code", "Skipping numerical stability (overflow in softmax, vanishing gradients)", "Studying linear algebra as pure theory instead of as 'what does this do to a vector?'"],
+    rubric:["You can derive ∇MSE on paper without help", "Your softmax+CE in pure numpy matches PyTorch on the same input", "You can explain the chain rule to a friend in 90 seconds"],
+  },
+  2: {
+    eli5:"numpy + pandas + matplotlib. Replace every <code>for</code> loop you can. Vectorize.",
+    pitfalls:["Looping over a DataFrame with <code>.iterrows()</code> when <code>.apply()</code> or vectorized ops work", "Forgetting to set a random seed — non-reproducible notebooks", "Plotting before exploring summary stats"],
+    rubric:["A non-trivial DataFrame transform has zero explicit Python loops", "Your Titanic notebook tells a story, not a list of stats", "You can <code>groupby().agg()</code> a multi-column summary from memory"],
+    game:{type:"vectorize"},
+  },
+  3: {
+    eli5:"Classical ML still pays. Linear regression + trees + boosting handle 80% of tabular problems.",
+    pitfalls:["Comparing models with accuracy on an imbalanced dataset", "Tuning hyperparameters on the test set (data leakage)", "Skipping a baseline (always start with logistic regression or one-rule)"],
+    rubric:["You can derive logistic regression's gradient by hand", "Your Kaggle submission beats 'always predict the mean'", "You can name 3 fixes for overfitting and 3 for underfitting"],
+  },
+  4: {
+    eli5:"Stack non-linear layers. Backprop with autograd. The breakthrough was scale, not cleverness.",
+    pitfalls:["Watching Karpathy without re-typing the code", "Forgetting <code>opt.zero_grad()</code> — your gradients accumulate", "Training without a learning-rate sweep"],
+    rubric:["Your micrograd autograd matches torch on small problems", "MNIST MLP > 97% accuracy", "You can explain why ReLU works and what dying ReLU is"],
+    game:{type:"backprop"},
+  },
+  5: {
+    eli5:"Tokens are how LLMs see text. Embeddings turn tokens into vectors. Attention picks which to look at.",
+    pitfalls:["Confusing byte-level BPE with character-level tokenizers", "Assuming 1 word = 1 token (it's not — average ~4 chars/token)", "Skipping the BPE-from-scratch exercise"],
+    rubric:["Your BPE tokenizer round-trips arbitrary text", "You can sketch the seq2seq + attention architecture from memory", "You know why transformers won (parallelism)"],
+  },
+  6: {
+    eli5:"Attention picks what to look at. Multi-head does it many ways. Causal mask blocks the future. RoPE positions.",
+    pitfalls:["Forgetting the <code>√d_k</code> scale → softmax saturates → gradients vanish", "Mis-positioning the residual + LayerNorm — pre-LN vs post-LN matters", "Skipping the causal mask during training but adding it at inference (or vice versa)"],
+    rubric:["You can implement self-attention from memory in &lt; 20 lines", "Your nanoGPT generates coherent Shakespeare-ish text", "You can explain RoPE's rotation trick without notes"],
+    game:{type:"attention"},
+  },
+  7: {
+    eli5:"Train a real GPT on the internet. Watch loss drop. Watch it learn English.",
+    pitfalls:["Skipping gradient clipping → NaN loss after a few thousand steps", "Forgetting bf16/fp16 mixed precision → 2× slower training", "Eval on training data (always — set up HellaSwag from day one)"],
+    rubric:["Loss curve looks healthy (smooth decay, no plateau at 4)", "Model speaks recognisable English", "Weights uploaded to HuggingFace with a model card"],
+    game:{type:"losscurve"},
+  },
+  8: {
+    eli5:"Make a 'next token predictor' into a helpful assistant. SFT then DPO. LoRA makes it cheap.",
+    pitfalls:["Fine-tuning all weights when LoRA would do (10–100× cheaper)", "Skipping the <code>chat_template</code> — model outputs garbage", "Using too high a DPO beta — model drifts from the base too far"],
+    rubric:["Your LoRA fine-tune beats the base model on your golden set", "DPO outputs look more aligned than SFT-only", "Model card describes data + eval honestly"],
+    game:{type:"lora"},
+  },
+  9: {
+    eli5:"Make Claude do something useful. Tools, caching, evals. This is where you make money.",
+    pitfalls:["Forgetting prompt caching → 10× cost", "Long monolithic prompts (split into sections, cache the static parts)", "Shipping without an eval harness — silent regressions"],
+    rubric:["Your CLI assistant uses tool calls + caching", "Your Discord/Slack bot is live and not embarrassing", "Your eval harness flags regressions before deploy"],
+    game:{type:"prompt"},
+  },
+  10: {
+    eli5:"Embed → search → answer. Add reranker + contextual retrieval = 30% more relevant.",
+    pitfalls:["Chunk sizes too big (whole pages) or too small (one sentence)", "Skipping the reranker — top-k from pure vector search is noisy", "No eval set — you can't measure RAG quality without one"],
+    rubric:["Recall@5 measurably better with contextual retrieval", "Reranker bumps recall by another ~25%", "App is something you actually use day-to-day"],
+  },
+  11: {
+    eli5:"LLM in a loop with tools = agent. Plan → act → observe → repeat. Cap iterations or it burns money.",
+    pitfalls:["No iteration cap → infinite loops, $$$", "No observability → can't debug weird failures", "Multi-agent for tasks that aren't actually parallel"],
+    rubric:["Agent solves an end-to-end real task you trust", "Cost per run measured + tracked", "Failure modes catalogued + alerted"],
+    game:{type:"agent"},
+  },
+  12: {
+    eli5:"Ship the model. vLLM serves. FastAPI wraps. Docker packages. Grafana watches. OWASP guides defense.",
+    pitfalls:["Skipping rate limiting → first viral tweet = bankruptcy", "Logging user prompts without PII redaction", "No prompt-injection defense → exfiltration"],
+    rubric:["System diagram in the repo", "Load test: p99 latency + req/s documented", "Red-team report: prompt injection attempts blocked"],
+    game:{type:"cost"},
+  },
+  13: {
+    eli5:"You're never 'done'. 1 paper / week. 1 blog post / month. 1 PR / quarter. Compound for years.",
+    pitfalls:["Reading papers without re-implementing key results", "Building toy projects no one will use", "Hoarding knowledge instead of writing it up"],
+    rubric:["GitHub has 5+ clean projects with READMEs and results", "Personal site has 6+ blog posts", "At least 1 merged OSS PR on a known repo"],
+  },
+};
+
 const GLOSSARY = [
   ["Neural Network","A bunch of tiny calculators (neurons) arranged in layers. Multiply inputs by weights, add a bias, squash. Repeat. Learn the weights from data."],
   ["Neuron","One node: takes inputs, computes weighted sum + bias, applies activation function (e.g. ReLU). The atom of deep learning."],
@@ -2309,8 +2544,8 @@ function highlight(code, lang){
 }
 function openPhase(n){
   const p = PHASES.find(x=>x.n===n);
-  const deep = PHASE_DEEP[n];
-  if (!p || !deep) return;
+  const deep = Object.assign({}, PHASE_DEEP[n], PHASE_EXTRA[n] || {});
+  if (!p || !PHASE_DEEP[n]) return;
   document.getElementById('modalNum').textContent = p.n;
   document.getElementById('modalTitle').textContent = p.name;
   document.getElementById('modalMeta').innerHTML =
@@ -2332,9 +2567,21 @@ function openPhase(n){
   // STORY
   html += `<div class="modal-section" id="story-${n}">
     <p class="lede">${deep.lede}</p>
+    ${deep.eli5 ? `<button class="pro-toggle eli5-toggle" data-toggle-eli5="${n}" aria-expanded="false">🧒 Explain like I'm 5</button>
+                   <div class="pro-detail eli5-detail" id="eli5Detail-${n}">${deep.eli5}</div>` : ''}
     ${deep.story ? `<div class="story">${deep.story.map(p=>`<p>${p}</p>`).join('')}</div>` : ''}
-    ${deep.pro ? `<button class="pro-toggle" data-toggle-pro="${n}">⚡ Show pro detail</button>
+    ${deep.pro ? `<button class="pro-toggle" data-toggle-pro="${n}" aria-expanded="false">⚡ Show pro detail</button>
                   <div class="pro-detail" id="proDetail-${n}">${deep.pro}</div>` : ''}
+    ${deep.pitfalls && deep.pitfalls.length ? `
+      <div class="callout-block pitfalls">
+        <h4>⚠ Common pitfalls</h4>
+        <ul>${deep.pitfalls.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </div>` : ''}
+    ${deep.rubric && deep.rubric.length ? `
+      <div class="callout-block rubric">
+        <h4>✓ "I've mastered this phase" rubric</h4>
+        <ul>${deep.rubric.map(x=>`<li>${x}</li>`).join('')}</ul>
+      </div>` : ''}
   </div>`;
 
   // PLAY
@@ -2427,6 +2674,16 @@ function wireModal(n){
       const d = document.getElementById('proDetail-'+id);
       const showing = d.classList.toggle('show');
       b.innerHTML = showing ? '⚡ Hide pro detail' : '⚡ Show pro detail';
+      b.setAttribute('aria-expanded', showing ? 'true' : 'false');
+    });
+  });
+  document.querySelectorAll('[data-toggle-eli5]').forEach(b => {
+    b.addEventListener('click', () => {
+      const id = b.dataset.toggleEli5;
+      const d = document.getElementById('eli5Detail-'+id);
+      const showing = d.classList.toggle('show');
+      b.innerHTML = showing ? '🧒 Hide ELI5' : "🧒 Explain like I'm 5";
+      b.setAttribute('aria-expanded', showing ? 'true' : 'false');
     });
   });
   document.querySelectorAll('[data-copy]').forEach(b => {
@@ -2490,6 +2747,14 @@ function mountGame(n, cfg){
     bpestep: gameBPEStep,
     losscurve: gameLossCurve,
     retrieve: gameRetrieve,
+    setup: gameSetup,
+    vectorize: gameVectorize,
+    backprop: gameBackprop,
+    attention: gameAttention,
+    lora: gameLoRA,
+    prompt: gamePrompt,
+    agent: gameAgent,
+    cost: gameCost,
   };
   const fn = dispatch[cfg.type];
   if (!fn) return;
@@ -3039,6 +3304,381 @@ function gameRetrieve(host, signal){
   sample();
 }
 
+/* ----- 9 additional phase games ----- */
+function gameSetup(host, signal){
+  host.innerHTML = `
+    <div class="hint">🖥 <b>Walk through the install order.</b> Click in sequence. Anything skipped breaks the next step.</div>
+    <div id="setup-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"></div>
+    <div class="game-readout">
+      <span id="setup-msg">Click Python first.</span>
+    </div>`;
+  const steps = [
+    {k:'python', l:'Python 3.11+', need:[]},
+    {k:'uv',     l:'uv (pkg mgr)', need:['python']},
+    {k:'git',    l:'Git',           need:[]},
+    {k:'vscode', l:'VS Code',       need:[]},
+    {k:'sdk',    l:'anthropic SDK', need:['python','uv']},
+    {k:'key',    l:'API key (setx)',need:['python']},
+    {k:'repo',   l:'GitHub repo',   need:['git']},
+    {k:'call',   l:'First API call',need:['python','uv','sdk','key']},
+  ];
+  const done = new Set();
+  function render(){
+    const el = host.querySelector('#setup-board');
+    el.innerHTML = steps.map(s=>{
+      const ok = done.has(s.k);
+      const ready = s.need.every(n=>done.has(n));
+      const cls = ok ? 'ok' : (ready ? 'ready' : 'lock');
+      const bg = ok?'rgba(62,207,142,.2)':ready?'rgba(122,162,255,.1)':'rgba(255,255,255,.03)';
+      const border = ok?'var(--ok)':ready?'var(--accent)':'var(--border)';
+      const color = ok?'var(--ok)':ready?'var(--ink)':'var(--dim)';
+      return `<button data-k="${s.k}" style="padding:14px;border-radius:10px;background:${bg};border:1px solid ${border};color:${color};font-weight:600;cursor:${ready||ok?'pointer':'not-allowed'};font-family:inherit;font-size:13px;text-align:left;line-height:1.4" ${ready||ok?'':'disabled'} aria-label="${s.l}${ok?' completed':ready?' ready':' locked'}">
+        ${ok?'✓':ready?'▸':'🔒'} ${s.l}
+      </button>`;
+    }).join('');
+    el.querySelectorAll('button[data-k]').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const k = b.dataset.k;
+        const s = steps.find(x=>x.k===k);
+        if (s.need.every(n=>done.has(n))){
+          done.add(k); render();
+          const left = steps.filter(s=>!done.has(s.k)).length;
+          host.querySelector('#setup-msg').textContent = left? `${left} step${left>1?'s':''} left` : '🎉 done — your env is ready';
+        }
+      },{signal});
+    });
+  }
+  render();
+}
+
+function gameVectorize(host, signal){
+  host.innerHTML = `
+    <div class="hint">🏁 <b>Vectorize the loop.</b> Pick the numpy expression that produces the same array.</div>
+    <pre style="font-size:13px;padding:14px;background:rgba(7,9,18,.5);border:1px solid var(--border);border-radius:8px;margin:0">for i in range(len(a)):
+    out[i] = a[i] ** 2 + 3 * a[i] - 1</pre>
+    <div id="vec-opts" style="display:flex;flex-direction:column;gap:8px;margin-top:14px"></div>
+    <div class="game-readout"><span id="vec-msg"></span></div>`;
+  const opts = [
+    {t:'a**2 + 3*a - 1', ok:true},
+    {t:'np.sum(a**2) + 3*a - 1', ok:false},
+    {t:'a*a + 3 + a - 1', ok:false},
+    {t:'a.dot(a) + 3*a - 1', ok:false},
+  ];
+  const el = host.querySelector('#vec-opts');
+  el.innerHTML = opts.map((o,i)=>`<button data-i="${i}" style="text-align:left;padding:10px 14px;border-radius:8px;background:rgba(7,9,18,.5);border:1px solid var(--border);color:var(--ink);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px">${o.t}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const i = +b.dataset.i;
+      el.querySelectorAll('button').forEach(x=>x.disabled=true);
+      opts.forEach((o,j)=>{
+        const btn = el.querySelector(`button[data-i="${j}"]`);
+        if (o.ok){btn.style.borderColor='var(--ok)'; btn.style.background='rgba(62,207,142,.12)';}
+        else if (j===i){btn.style.borderColor='var(--err)'; btn.style.background='rgba(255,107,107,.1)';}
+      });
+      host.querySelector('#vec-msg').innerHTML = opts[i].ok
+        ? '<span class="ok">✓ Yep — vectorization replaces the loop with one C-speed expression.</span>'
+        : '<span class="err">Not quite — the loop is element-wise <code>a[i]**2 + 3*a[i] - 1</code>; numpy broadcasts it as <code>a**2 + 3*a - 1</code>.</span>';
+    },{signal});
+  });
+}
+
+function gameBackprop(host, signal){
+  host.innerHTML = `
+    <div class="hint">🧮 <b>Walk a backward pass.</b> Step through forward + reverse on <code>y = (a*b + c)²</code>. Click Step.</div>
+    <canvas height="220"></canvas>
+    <div class="game-controls">
+      <button class="demo-btn" id="bp-step">▸ Step</button>
+      <button class="demo-btn alt" id="bp-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout">
+      <span id="bp-label">Click Step to begin.</span>
+    </div>`;
+  const c = host.querySelector('canvas');
+  const ctx = c.getContext('2d');
+  const a=2, b=3, cc=1;
+  let phase = 0; // 0..7
+  let W,H;
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    // nodes
+    const nodes = [
+      {x:60,  y:60,  l:'a=2'},
+      {x:60,  y:160, l:'b=3'},
+      {x:60,  y:H-30,l:'c=1'},
+      {x:W*.42,y:110, l:'mul'},
+      {x:W*.65,y:140, l:'add'},
+      {x:W*.85,y:140, l:'sq'},
+    ];
+    const edges = [[0,3],[1,3],[3,4],[2,4],[4,5]];
+    const fwdVals = ['a=2','b=3','c=1','a·b=6','+c=7','y=49'];
+    const bwdVals = ['∂y/∂a = 14','∂y/∂b = 14','∂y/∂c = 14','∂y/∂(ab) = 14','∂y/∂(ab+c) = 14','dy=1'];
+    // edges
+    ctx.lineWidth = 2;
+    edges.forEach(([i,j],ei)=>{
+      const active = (phase >= ei+1 && phase <= 5) || (phase >= 6 && phase-5 > (4-ei));
+      ctx.strokeStyle = active ? (phase<=5?'#7aa2ff':'#ff7ad4') : 'rgba(122,162,255,.25)';
+      ctx.beginPath();ctx.moveTo(nodes[i].x+22,nodes[i].y);ctx.lineTo(nodes[j].x-22,nodes[j].y);ctx.stroke();
+    });
+    // nodes
+    nodes.forEach((n,i)=>{
+      const active = (phase>=1 && phase<=5 && i<=phase) || (phase>=6 && i>=5-(phase-6));
+      ctx.fillStyle = active ? (phase<=5?'rgba(122,162,255,.2)':'rgba(255,122,212,.2)') : 'rgba(7,9,18,.6)';
+      ctx.strokeStyle = active ? (phase<=5?'#7aa2ff':'#ff7ad4') : 'var(--border)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();ctx.arc(n.x,n.y,22,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle = '#eef2fa'; ctx.font = '600 11px JetBrains Mono';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.l, n.x, n.y);
+      if (phase>=1 && phase<=5 && i<=phase){
+        ctx.fillStyle = '#7aa2ff'; ctx.font='600 11px Inter';
+        ctx.fillText(fwdVals[i], n.x, n.y+34);
+      }
+      if (phase>=6 && i>=5-(phase-6)){
+        ctx.fillStyle = '#ff7ad4'; ctx.font='600 11px Inter';
+        ctx.fillText(bwdVals[i], n.x, n.y-34);
+      }
+    });
+    const labels = ['Forward: load a','Forward: load b','Forward: load c','Forward: a·b','Forward: +c','Forward: square → y','Backward: dy=1','Backward: ∂y/∂(ab+c) = 2(ab+c) = 14','Backward: ∂y/∂(ab), ∂y/∂c (chain)', 'Backward: ∂y/∂a = ∂y/∂(ab)·b, ∂y/∂b = ∂y/∂(ab)·a','✓ Done — chain rule complete'];
+    host.querySelector('#bp-label').textContent = labels[Math.min(phase,labels.length-1)];
+  }
+  host.querySelector('#bp-step').addEventListener('click',()=>{phase=Math.min(10,phase+1); draw();},{signal});
+  host.querySelector('#bp-reset').addEventListener('click',()=>{phase=0; draw();},{signal});
+  window.addEventListener('resize',draw,{signal});
+  draw();
+}
+
+function gameAttention(host, signal){
+  host.innerHTML = `
+    <div class="hint">🔦 <b>Click a token in the top row.</b> The bottom row lights up by how much that token attends to each other token.</div>
+    <div id="att-tokens" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="att-attend" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div class="game-readout"><span id="att-msg">Click a token above.</span></div>`;
+  const tokens = ['The','cat','sat','on','the','mat','because','it','was','tired'];
+  const att = [
+    [1,0,0,0,0,0,0,0,0,0],
+    [.3,1,0,0,0,0,0,0,0,0],
+    [.15,.55,1,0,0,0,0,0,0,0],
+    [.1,.2,.45,1,0,0,0,0,0,0],
+    [.08,.18,.2,.5,1,0,0,0,0,0],
+    [.08,.4,.2,.45,.6,1,0,0,0,0],
+    [.05,.15,.4,.1,.1,.25,1,0,0,0],
+    [.05,.78,.18,.05,.05,.15,.45,1,0,0],
+    [.05,.55,.1,.05,.05,.08,.2,.7,1,0],
+    [.04,.6,.12,.05,.05,.1,.25,.8,.45,1],
+  ];
+  const top = host.querySelector('#att-tokens');
+  const bot = host.querySelector('#att-attend');
+  top.innerHTML = tokens.map((t,i)=>`<button data-i="${i}" style="padding:7px 12px;border-radius:7px;background:rgba(122,162,255,.1);border:1px solid rgba(122,162,255,.3);color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;font-size:13px">${t}</button>`).join('');
+  function paint(qi){
+    const row = att[qi]; const sum = row.reduce((a,b)=>a+b,0);
+    const norm = row.map(v=>v/sum);
+    bot.innerHTML = tokens.map((t,i)=>{
+      const w = norm[i];
+      const op = .08 + w*.92;
+      return `<span style="padding:7px 12px;border-radius:7px;background:rgba(255,209,102,${op});color:#0a0e16;font-weight:600;font-size:13px;font-family:'JetBrains Mono',monospace" title="${(w*100).toFixed(1)}%">${t}<br><span style="font-size:10px;opacity:.7">${(w*100).toFixed(0)}%</span></span>`;
+    }).join('');
+    host.querySelector('#att-msg').innerHTML = `<b>${tokens[qi]}</b> attends most to: <span style="color:var(--gold)">${tokens[norm.indexOf(Math.max(...norm.slice(0,qi+1)))]}</span>`;
+  }
+  top.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>paint(+b.dataset.i),{signal});
+  });
+  paint(7); // default to "it"
+}
+
+function gameLoRA(host, signal){
+  host.innerHTML = `
+    <div class="hint">📐 <b>LoRA in pictures.</b> Update a giant matrix W by adding B·A (low-rank). Adjust rank r.</div>
+    <canvas height="220"></canvas>
+    <div class="game-controls">
+      <div class="demo-slider"><label>Rank r</label><input type="range" id="lo-r" min="1" max="32" step="1" value="8"><span class="val" id="lo-rv">8</span></div>
+    </div>
+    <div class="game-readout">
+      <span><b>W params</b><span id="lo-w">—</span></span>
+      <span><b>LoRA params</b><span id="lo-l">—</span></span>
+      <span><b>savings</b><span id="lo-s" class="ok">—</span></span>
+    </div>`;
+  const c = host.querySelector('canvas');
+  const ctx = c.getContext('2d');
+  const d = 64;
+  let W,H;
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    const r = +host.querySelector('#lo-r').value;
+    // visual: W is d×d square. B is d×r, A is r×d.
+    const cellW = Math.min(2.2, (W*.32)/d);
+    const padL = 40;
+    // W
+    ctx.fillStyle='#7aa2ff'; ctx.globalAlpha=.35;
+    ctx.fillRect(padL, 20, d*cellW, d*cellW);
+    ctx.globalAlpha=1; ctx.strokeStyle='var(--accent)'; ctx.lineWidth=1.5;
+    ctx.strokeRect(padL, 20, d*cellW, d*cellW);
+    ctx.fillStyle='#7aa2ff'; ctx.font='600 12px Inter';
+    ctx.fillText(`W (${d}×${d})`, padL, 12);
+    // B (d × r)
+    const bX = padL + d*cellW + 50;
+    ctx.fillStyle='#9d7aff'; ctx.globalAlpha=.5;
+    ctx.fillRect(bX, 20, r*cellW, d*cellW);
+    ctx.globalAlpha=1; ctx.strokeStyle='var(--accent2)';
+    ctx.strokeRect(bX, 20, r*cellW, d*cellW);
+    ctx.fillStyle='#9d7aff';
+    ctx.fillText(`B (${d}×${r})`, bX, 12);
+    // A (r × d)
+    const aY = 20 + d*cellW + 30;
+    ctx.fillStyle='#ff7ad4'; ctx.globalAlpha=.5;
+    ctx.fillRect(bX, aY, d*cellW, r*cellW);
+    ctx.globalAlpha=1; ctx.strokeStyle='#ff7ad4';
+    ctx.strokeRect(bX, aY, d*cellW, r*cellW);
+    ctx.fillStyle='#ff7ad4';
+    ctx.fillText(`A (${r}×${d})`, bX, aY-6);
+    // label
+    ctx.fillStyle='var(--muted)'; ctx.font='500 12px Inter';
+    ctx.fillText('W (frozen)', padL, 20 + d*cellW + 18);
+    ctx.fillText('+ B·A (trained)', bX, 20 + d*cellW + 18);
+    // stats
+    const wParams = d*d;
+    const lParams = d*r + r*d;
+    const savings = (1 - lParams/wParams)*100;
+    host.querySelector('#lo-w').textContent = wParams;
+    host.querySelector('#lo-l').textContent = lParams;
+    host.querySelector('#lo-s').textContent = savings>0 ? savings.toFixed(0)+'%' : '—';
+    host.querySelector('#lo-rv').textContent = r;
+  }
+  host.querySelector('#lo-r').addEventListener('input',draw,{signal});
+  window.addEventListener('resize',draw,{signal});
+  draw();
+}
+
+function gamePrompt(host, signal){
+  host.innerHTML = `
+    <div class="hint">✍ <b>Build a prompt.</b> Drop blocks in order. Watch token count + estimated cost (Claude Sonnet 4.6, cached vs uncached).</div>
+    <div id="pr-bench" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <div id="pr-stage" style="min-height:60px;padding:12px;background:rgba(7,9,18,.5);border:1px dashed var(--border);border-radius:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"></div>
+    <div class="game-readout">
+      <span><b>tokens</b><span id="pr-tok">0</span></span>
+      <span><b>uncached</b><span id="pr-c1" class="err">$0.0000</span></span>
+      <span><b>cached</b><span id="pr-c2" class="ok">$0.0000</span></span>
+      <span id="pr-msg" style="color:var(--gold)"></span>
+    </div>`;
+  const blocks = [
+    {k:'sys', l:'System: role + format', tok:120, cache:true},
+    {k:'fs',  l:'5 few-shot examples',   tok:800, cache:true},
+    {k:'doc', l:'RAG doc (big)',         tok:4000, cache:true},
+    {k:'user',l:'User question',         tok:35, cache:false},
+    {k:'cot', l:'"Think step by step"',  tok:8,  cache:false},
+    {k:'tool',l:'Tool definitions (3)',  tok:240, cache:true},
+  ];
+  let chosen = [];
+  function render(){
+    const bench = host.querySelector('#pr-bench');
+    bench.innerHTML = blocks.map(b=>`<button data-k="${b.k}" style="padding:8px 12px;border-radius:7px;background:rgba(122,162,255,.08);border:1px solid var(--border);color:var(--ink);cursor:pointer;font-family:inherit;font-size:12.5px">+ ${b.l} <span style="color:var(--dim);font-family:'JetBrains Mono'">${b.tok}t</span></button>`).join('');
+    bench.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{chosen.push(blocks.find(x=>x.k===b.dataset.k)); render();},{signal}));
+    const stage = host.querySelector('#pr-stage');
+    if (!chosen.length){stage.innerHTML='<span style="color:var(--dim);font-size:13px">Drop blocks above to build your prompt</span>';}
+    else stage.innerHTML = chosen.map((b,i)=>`<span style="padding:6px 10px;border-radius:6px;background:rgba(${b.cache?'62,207,142':'255,209,102'},.15);border:1px solid rgba(${b.cache?'62,207,142':'255,209,102'},.4);color:#fff;font-size:12.5px">${b.l} <button data-rm="${i}" style="background:none;border:none;color:var(--dim);cursor:pointer;margin-left:4px">×</button></span>`).join('');
+    stage.querySelectorAll('button[data-rm]').forEach(b=>b.addEventListener('click',()=>{chosen.splice(+b.dataset.rm,1); render();},{signal}));
+    const tot = chosen.reduce((s,b)=>s+b.tok,0);
+    const cached = chosen.filter(b=>b.cache).reduce((s,b)=>s+b.tok,0);
+    const uncachedT = tot;
+    // Claude Sonnet 4.6: ~$3/1M input, cached read ~$0.30/1M
+    const uncost = uncachedT * 3 / 1e6;
+    const cocost = (tot-cached)*3/1e6 + cached*0.3/1e6;
+    host.querySelector('#pr-tok').textContent = tot;
+    host.querySelector('#pr-c1').textContent = '$'+uncost.toFixed(4);
+    host.querySelector('#pr-c2').textContent = '$'+cocost.toFixed(4);
+    const save = uncost>0 ? Math.round((1-cocost/uncost)*100) : 0;
+    host.querySelector('#pr-msg').textContent = save>0 ? `caching saves ${save}%` : '';
+  }
+  render();
+}
+
+function gameAgent(host, signal){
+  host.innerHTML = `
+    <div class="hint">🤖 <b>Step a ReAct loop.</b> Click Next to watch reason → tool → observe → repeat.</div>
+    <div id="ag-log" style="font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.7;background:rgba(7,9,18,.6);border:1px solid var(--border);border-radius:8px;padding:14px;min-height:200px;max-height:280px;overflow-y:auto"></div>
+    <div class="game-controls">
+      <button class="demo-btn" id="ag-next">▸ Next step</button>
+      <button class="demo-btn alt" id="ag-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout">
+      <span><b>step</b><span id="ag-step">0</span></span>
+      <span><b>cost</b><span id="ag-cost" class="ok">$0.0000</span></span>
+    </div>`;
+  const trace = [
+    {t:'user',  c:'Find the latest paper on RoPE positional encoding and summarize it.'},
+    {t:'think', c:'I need to search the web for recent RoPE papers, pick the most-cited, then read the abstract.'},
+    {t:'tool',  c:'web_search("RoPE positional encoding 2024")'},
+    {t:'obs',   c:'3 results: RoFormer (2021), YaRN (2023), LongRoPE (2024)'},
+    {t:'think', c:'LongRoPE is most recent. Read it.'},
+    {t:'tool',  c:'fetch_url("arxiv.org/abs/2402.13753")'},
+    {t:'obs',   c:'Abstract: "LongRoPE extends context to 2M tokens via non-uniform RoPE..."'},
+    {t:'think', c:'Got enough. Synthesize.'},
+    {t:'final', c:'LongRoPE (2024) extends LLM context windows from ~128k to 2M tokens by non-uniformly rescaling RoPE rotations + a short fine-tune. Key: low cost, high stretch.'},
+  ];
+  let step = 0;
+  const cost = [0, .003, .005, 0, .003, .005, 0, .003, .004];
+  let total = 0;
+  function render(){
+    const log = host.querySelector('#ag-log');
+    const colorOf = {user:'#7ad4ff', think:'#9d7aff', tool:'#ffd166', obs:'#3ecf8e', final:'#7aa2ff'};
+    const labelOf = {user:'USER', think:'THINK', tool:'TOOL', obs:'OBS', final:'ANSWER'};
+    log.innerHTML = trace.slice(0,step).map((x,i)=>`<div><span style="color:${colorOf[x.t]};font-weight:700;letter-spacing:.04em">${labelOf[x.t]}</span> <span style="color:var(--ink)">${escapeHtml(x.c)}</span></div>`).join('');
+    log.scrollTop = log.scrollHeight;
+    host.querySelector('#ag-step').textContent = step;
+    host.querySelector('#ag-cost').textContent = '$'+total.toFixed(4);
+  }
+  host.querySelector('#ag-next').addEventListener('click',()=>{
+    if (step < trace.length){total += cost[step]; step++; render();}
+  },{signal});
+  host.querySelector('#ag-reset').addEventListener('click',()=>{step=0;total=0;render();},{signal});
+  render();
+}
+
+function gameCost(host, signal){
+  host.innerHTML = `
+    <div class="hint">💰 <b>Simulate scale.</b> Tune requests/sec, prompt size, caching. See monthly $ + p99 latency.</div>
+    <div class="game-controls">
+      <div class="demo-slider"><label>req/s</label><input type="range" id="co-rps" min="0.1" max="100" step="0.1" value="5"><span class="val" id="co-rpsv">5</span></div>
+      <div class="demo-slider"><label>tokens/req</label><input type="range" id="co-tok" min="100" max="20000" step="100" value="2000"><span class="val" id="co-tokv">2000</span></div>
+      <div class="demo-slider"><label>cache hit %</label><input type="range" id="co-cache" min="0" max="100" step="5" value="60"><span class="val" id="co-cachev">60</span></div>
+    </div>
+    <div class="game-readout">
+      <span><b>$/day</b><span id="co-d">—</span></span>
+      <span><b>$/month</b><span id="co-m" class="err">—</span></span>
+      <span><b>cost saved</b><span id="co-saved" class="ok">—</span></span>
+      <span><b>p99 latency</b><span id="co-p99">—</span></span>
+    </div>`;
+  function compute(){
+    const rps = +host.querySelector('#co-rps').value;
+    const tok = +host.querySelector('#co-tok').value;
+    const cache = +host.querySelector('#co-cache').value/100;
+    // Claude Sonnet 4.6: $3/M input, $15/M output; cached read $0.3/M
+    const inputCost = tok * (3*(1-cache) + 0.3*cache) / 1e6;
+    const outputCost = 400 * 15 / 1e6; // assume 400 output tokens
+    const perReq = inputCost + outputCost;
+    const perDay = perReq * rps * 86400;
+    const perMonth = perDay * 30;
+    const uncached = tok*3/1e6 * rps*86400*30 + 400*15/1e6 * rps*86400*30;
+    const saved = uncached - perMonth;
+    // p99 latency: increases with prompt size, decreases with cache hits
+    const p99 = 800 + tok*0.05 + (1-cache)*200 + Math.max(0, rps-20)*30;
+    host.querySelector('#co-d').textContent = '$'+perDay.toFixed(2);
+    host.querySelector('#co-m').textContent = '$'+perMonth.toFixed(0);
+    host.querySelector('#co-saved').textContent = '$'+saved.toFixed(0);
+    host.querySelector('#co-p99').textContent = Math.round(p99)+'ms';
+    host.querySelector('#co-rpsv').textContent = rps.toFixed(1);
+    host.querySelector('#co-tokv').textContent = tok;
+    host.querySelector('#co-cachev').textContent = (cache*100).toFixed(0);
+  }
+  ['co-rps','co-tok','co-cache'].forEach(id => host.querySelector('#'+id).addEventListener('input',compute,{signal}));
+  compute();
+}
+
 function updateQuizScore(n){
   const ans = (PROG.quiz && PROG.quiz[n]) || {};
   const total = PHASE_DEEP[n].quiz.length;
@@ -3421,6 +4061,9 @@ document.querySelectorAll('.demo-tab').forEach(t=>{
       if (k==='nn' && window.nnDraw) window.nnDraw();
       if (k==='gd' && window.gdDraw) window.gdDraw();
       if (k==='att') renderAttention();
+      if (k==='ln' && window.lnDraw) window.lnDraw();
+      if (k==='temp' && window.tempDraw) window.tempDraw();
+      if (k==='beam' && window.beamDraw) window.beamDraw();
     });
   });
 });
@@ -3871,9 +4514,433 @@ renderAttention();
   window.gdDraw = gdDraw;
 })();
 
+/* ================== DEMO 5: LAYERNORM ================== */
+(function(){
+  const c = document.getElementById('ln-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let W,H,dpr;
+  const N = 16;
+  let x = Array.from({length:N},()=>Math.random()*4 - 2);
+  function resize(){
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=c.clientWidth; H=c.clientHeight;
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  function draw(){
+    if (!W) return;
+    ctx.clearRect(0,0,W,H);
+    const g = +document.getElementById('ln-g').value;
+    const b = +document.getElementById('ln-b').value;
+    const mu = x.reduce((a,b)=>a+b,0)/N;
+    const variance = x.reduce((a,b)=>a+(b-mu)**2,0)/N;
+    const sigma = Math.sqrt(variance + 1e-5);
+    const normed = x.map(v => g*(v-mu)/sigma + b);
+    const norm = Math.sqrt(x.reduce((a,b)=>a+b*b,0));
+    // Two rows of bars: raw + normalized
+    const padL = 30, padR = 12, gap = 18, half = (H - gap)/2 - 30;
+    const bw = (W - padL - padR)/N;
+    function row(arr, top, color, label){
+      const max = Math.max(2, ...arr.map(Math.abs));
+      const baseline = top + half/2;
+      ctx.strokeStyle='rgba(238,242,250,.12)';
+      ctx.beginPath();ctx.moveTo(padL, baseline);ctx.lineTo(W-padR, baseline);ctx.stroke();
+      arr.forEach((v,i)=>{
+        const h = (v/max) * (half/2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = .55 + Math.min(.45, Math.abs(v)/max*.45);
+        const bx = padL + i*bw + 2;
+        ctx.fillRect(bx, Math.min(baseline, baseline-h), bw-4, Math.abs(h));
+        ctx.globalAlpha = 1;
+      });
+      ctx.fillStyle='var(--muted)'; ctx.font='600 11px Inter';
+      ctx.fillText(label, padL, top+10);
+    }
+    row(x, 18, '#7aa2ff', 'raw input');
+    row(normed, H/2 + 8, '#ffd166', `LayerNorm: γ·(x−μ)/σ + β`);
+    document.getElementById('ln-mu').textContent = mu.toFixed(2);
+    document.getElementById('ln-sig').textContent = sigma.toFixed(2);
+    document.getElementById('ln-n').textContent = norm.toFixed(2);
+    document.getElementById('ln-gv').textContent = g.toFixed(1);
+    document.getElementById('ln-bv').textContent = b.toFixed(1);
+  }
+  document.getElementById('ln-rand').addEventListener('click', () => {
+    x = Array.from({length:N},()=>Math.random()*4 - 2);
+    draw();
+  });
+  ['ln-g','ln-b'].forEach(id => document.getElementById(id).addEventListener('input', draw));
+  c.addEventListener('click', e => {
+    const r = c.getBoundingClientRect();
+    const idx = Math.floor((e.clientX - r.left - 30) / ((W-42)/N));
+    if (idx >= 0 && idx < N) { x[idx] = ((e.clientY - r.top)/(H/2 - 30) - 1) * -2; draw(); }
+  });
+  window.addEventListener('resize', resize);
+  window.lnDraw = draw;
+  resize();
+})();
+
+/* ================== DEMO 6: EMBEDDING LOOKUP ================== */
+(function(){
+  const input = document.getElementById('emb-input');
+  if (!input) return;
+  const out = document.getElementById('emb-out');
+  // Toy 16-dim "embeddings" — clustered around real semantic groups
+  const VOCAB = {
+    'king':    [.9, .2, .8,-.1, .3, .5,-.2, .1, .4,-.3, .6, .2,-.1, .3, .5, .1],
+    'queen':   [.85,.3, .82,-.05,.32,.4,-.18,.12,.42,-.25,.58,.18,-.08,.28,.48,.12],
+    'man':     [.6, .1, .3,-.2,  .2, .55,-.3,-.1,.1,-.4, .5, .1, .0,  .2, .3, .0],
+    'woman':   [.55,.2, .35,-.15, .25,.5,-.28,.0, .15,-.35,.52,.08, .02, .22,.32,.05],
+    'paris':   [-.2,.5, .1, .8,  .1, .3, .6, .2, .3, .4, .1, .5, .7,-.1, .2, .3],
+    'london':  [-.15,.55,.12,.78, .08,.32,.62,.18,.32,.42,.12,.48,.68,-.08,.22,.32],
+    'france':  [-.25,.45,.08,.85, .05,.28,.58,.25,.28,.45,.08,.52,.72,-.12,.18,.28],
+    'code':    [.1,-.4, .5, .2,-.6, .3, .1, .7, .8,-.5, .2,-.1, .4, .6,-.3,-.2],
+    'python':  [.15,-.45,.55,.18,-.65,.35,.05,.72,.85,-.48,.22,-.08,.42,.65,-.28,-.18],
+    'rust':    [.12,-.42,.52,.22,-.62,.28,.08,.68,.78,-.52,.18,-.12,.38,.62,-.32,-.22],
+    'train':   [.4, .1,-.3, .2, .7,-.4, .5,-.2, .3, .1, .8,-.5, .2,-.3, .6, .4],
+    'model':   [.35,.15,-.25,.22,.68,-.42,.52,-.18,.32,.12,.78,-.48,.22,-.28,.62,.42],
+    'attention':[.45,.12,-.28,.18,.72,-.38,.55,-.22,.28,.08,.82,-.52,.18,-.32,.58,.38],
+    'gpt':     [.38,.18,-.22,.25,.7,-.4, .5,-.15,.3, .15,.8,-.5, .2,-.3, .6, .4],
+  };
+  function dot(a,b){return a.reduce((s,v,i)=>s+v*b[i],0)}
+  function mag(a){return Math.sqrt(a.reduce((s,v)=>s+v*v,0))}
+  function cos(a,b){return dot(a,b)/(mag(a)*mag(b))}
+  function render(){
+    const q = input.value.trim().toLowerCase();
+    if (!q){ out.innerHTML = '<p style="color:var(--dim);font-size:13px">Type a vocabulary word above.</p>'; return; }
+    const vec = VOCAB[q];
+    if (!vec){
+      out.innerHTML = `<p style="color:var(--err);font-size:13.5px">Not in toy vocab. Try one of: <code>${Object.keys(VOCAB).join('</code>, <code>')}</code></p>`;
+      return;
+    }
+    const sims = Object.entries(VOCAB).filter(([k])=>k!==q).map(([k,v])=>({k, sim:cos(vec,v)})).sort((a,b)=>b.sim-a.sim).slice(0,3);
+    out.innerHTML = `
+      <div style="display:flex;gap:3px;flex-wrap:wrap;padding:14px;background:rgba(7,9,18,.5);border-radius:10px;border:1px solid var(--border);margin-bottom:14px">
+        ${vec.map(v=>{
+          const abs = Math.abs(v);
+          const col = v>=0 ? `rgba(122,162,255,${.3+abs*.7})` : `rgba(255,122,212,${.3+abs*.7})`;
+          return `<span title="${v.toFixed(2)}" style="flex:1;min-width:24px;height:36px;background:${col};border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:'JetBrains Mono';color:#0a0e16;font-weight:700">${v.toFixed(1)}</span>`;
+        }).join('')}
+      </div>
+      <div style="font-size:13.5px;color:var(--muted);margin-bottom:8px">Nearest neighbours of <code style="color:var(--accent)">${q}</code> by cosine similarity:</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${sims.map(s=>`
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(122,162,255,.06);border:1px solid var(--border);border-radius:8px">
+            <span style="font-family:'JetBrains Mono';font-weight:700;color:var(--accent);min-width:80px">${s.k}</span>
+            <div style="flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden"><div style="height:100%;width:${(s.sim*100).toFixed(0)}%;background:linear-gradient(90deg,var(--accent),var(--gold))"></div></div>
+            <span style="font-family:'JetBrains Mono';font-size:12px;color:var(--gold);min-width:50px;text-align:right">${s.sim.toFixed(3)}</span>
+          </div>`).join('')}
+      </div>`;
+  }
+  input.addEventListener('input', render);
+  render();
+})();
+
+/* ================== DEMO 7: TEMPERATURE / SAMPLING ================== */
+(function(){
+  const c = document.getElementById('temp-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let W,H,dpr;
+  const tokens = ['the','a','some','one','this','that','my','its','his','her'];
+  const logits = [3.8, 2.9, 1.8, 1.4, 1.2, 0.9, 0.7, 0.4, 0.2, -0.3];
+  let samples = new Array(tokens.length).fill(0);
+  function softmaxTemp(logits, t){
+    const z = logits.map(l => l/t);
+    const m = Math.max(...z);
+    const e = z.map(v => Math.exp(v-m));
+    const s = e.reduce((a,b)=>a+b,0);
+    return e.map(v => v/s);
+  }
+  function topp(probs, p){
+    const idx = probs.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v);
+    let s = 0; const kept = new Set();
+    for (const {v,i} of idx){ s+=v; kept.add(i); if (s>=p) break; }
+    const out = probs.map((v,i)=>kept.has(i)?v:0);
+    const total = out.reduce((a,b)=>a+b,0) || 1;
+    return [out.map(v=>v/total), kept.size];
+  }
+  function resize(){
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=c.clientWidth; H=c.clientHeight;
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  function draw(){
+    if (!W) return;
+    ctx.clearRect(0,0,W,H);
+    const t = +document.getElementById('temp-t').value;
+    const p = +document.getElementById('temp-p').value;
+    const raw = softmaxTemp(logits, t);
+    const [probs, kept] = topp(raw, p);
+    const max = Math.max(...probs, 0.01);
+    const N = tokens.length;
+    const padL = 50, padB = 50;
+    const bw = (W-padL-12)/N;
+    // grid
+    ctx.strokeStyle='rgba(238,242,250,.08)';
+    for (let i=0;i<5;i++){const y=20 + (H-padB-20)*i/4; ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-12,y);ctx.stroke();}
+    // bars (probability)
+    probs.forEach((v,i)=>{
+      const h = (v/max) * (H-padB-30);
+      const bx = padL + i*bw + 3;
+      const by = H - padB - h;
+      ctx.fillStyle = v>0 ? `rgba(122,162,255,${.5+v*.5})` : 'rgba(255,255,255,.05)';
+      ctx.fillRect(bx, by, bw-6, h);
+      ctx.fillStyle='var(--muted)'; ctx.font='10px JetBrains Mono';
+      ctx.textAlign='center';
+      ctx.fillText(tokens[i], bx + (bw-6)/2, H-padB+14);
+      if (v>.01){
+        ctx.fillStyle='var(--accent)'; ctx.font='600 10px JetBrains Mono';
+        ctx.fillText((v*100).toFixed(0)+'%', bx + (bw-6)/2, by-4);
+      }
+    });
+    // samples overlay (small dots)
+    const totalSamples = samples.reduce((a,b)=>a+b,0);
+    if (totalSamples > 0){
+      ctx.fillStyle='rgba(255,209,102,.85)';
+      samples.forEach((cnt,i)=>{
+        for (let s=0;s<cnt;s++){
+          const sx = padL + i*bw + 3 + Math.random()*(bw-6);
+          const sy = H - padB - 4 - Math.random() * Math.min(cnt*2, H-padB-30);
+          ctx.beginPath();ctx.arc(sx, sy, 1.5, 0, Math.PI*2);ctx.fill();
+        }
+      });
+    }
+    const H_ = -probs.reduce((a,b)=>a + (b>0?b*Math.log(b):0), 0);
+    document.getElementById('temp-k').textContent = kept;
+    document.getElementById('temp-h').textContent = H_.toFixed(2)+' nats';
+    document.getElementById('temp-tv').textContent = t.toFixed(2);
+    document.getElementById('temp-pv').textContent = p.toFixed(2);
+  }
+  ['temp-t','temp-p'].forEach(id => document.getElementById(id).addEventListener('input', () => { samples = new Array(tokens.length).fill(0); draw(); }));
+  document.getElementById('temp-sample').addEventListener('click', () => {
+    const t = +document.getElementById('temp-t').value;
+    const p = +document.getElementById('temp-p').value;
+    const [probs] = topp(softmaxTemp(logits, t), p);
+    samples = new Array(tokens.length).fill(0);
+    for (let s=0;s<100;s++){
+      const r = Math.random(); let acc=0;
+      for (let i=0;i<probs.length;i++){ acc += probs[i]; if (r <= acc){ samples[i]++; break; } }
+    }
+    draw();
+  });
+  window.addEventListener('resize', resize);
+  window.tempDraw = draw;
+  resize();
+})();
+
+/* ================== DEMO 8: BEAM SEARCH ================== */
+(function(){
+  const c = document.getElementById('beam-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let W,H,dpr;
+  // tree: at each step, each node has 3 children with log-probs
+  // We craft so greedy makes a locally good but globally bad choice
+  const tree = {
+    root: '<s>',
+    children: [
+      {tok:'The',  lp:-0.5, // greedy pick
+       children: [
+         {tok:'cat',  lp:-1.2, children:[{tok:'sat',lp:-1.5}, {tok:'ran',lp:-1.8}, {tok:'is',lp:-2.0}]},
+         {tok:'dog',  lp:-1.6, children:[{tok:'ran',lp:-1.3}, {tok:'sat',lp:-1.7}, {tok:'is',lp:-2.0}]},
+         {tok:'man',  lp:-1.8, children:[{tok:'is',lp:-1.4}, {tok:'sat',lp:-2.0}, {tok:'ran',lp:-2.4}]},
+       ]},
+      {tok:'A',    lp:-0.8, // beam will explore
+       children:[
+         {tok:'small',lp:-1.0,children:[{tok:'cat',lp:-0.6}, {tok:'dog',lp:-1.0}, {tok:'bird',lp:-1.4}]},
+         {tok:'big',  lp:-1.5,children:[{tok:'cat',lp:-1.0}, {tok:'dog',lp:-1.2}, {tok:'tree',lp:-1.6}]},
+         {tok:'red',  lp:-1.8,children:[{tok:'car',lp:-1.0}, {tok:'box',lp:-1.5}, {tok:'flag',lp:-2.0}]},
+       ]},
+      {tok:'Some', lp:-1.5,
+       children:[
+         {tok:'cats', lp:-1.6,children:[{tok:'sleep',lp:-1.4},{tok:'eat',lp:-1.7},{tok:'play',lp:-2.0}]},
+         {tok:'dogs', lp:-1.7,children:[{tok:'bark',lp:-1.5},{tok:'run',lp:-1.7},{tok:'play',lp:-1.9}]},
+         {tok:'birds',lp:-2.0,children:[{tok:'fly',lp:-1.0},{tok:'sing',lp:-1.4},{tok:'eat',lp:-2.2}]},
+       ]},
+    ],
+  };
+  let selected = []; // list of {path:[tok], lp}
+  function resize(){
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=c.clientWidth; H=c.clientHeight;
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    draw();
+  }
+  function decode(k){
+    // beam k = keep top-k partial sequences at each step
+    let beams = [{path:['<s>'], lp:0, node:tree}];
+    for (let step=0;step<3;step++){
+      let next = [];
+      beams.forEach(b => {
+        const kids = b.node.children;
+        if (!kids) return;
+        kids.forEach(k2 => {
+          next.push({path:[...b.path, k2.tok], lp: b.lp + k2.lp, node:k2});
+        });
+      });
+      next.sort((a,b)=>b.lp-a.lp);
+      beams = next.slice(0, k);
+    }
+    return beams;
+  }
+  function draw(){
+    if (!W) return;
+    ctx.clearRect(0,0,W,H);
+    const k = +document.getElementById('beam-k').value;
+    const beams = selected.length ? selected : [];
+    // node layout
+    const padL = 24, padR = 12, padT = 30, padB = 30;
+    const levelW = (W-padL-padR)/3.5;
+    // draw root
+    const rootX = padL, rootY = H/2;
+    function drawNode(x,y,t,active){
+      ctx.fillStyle = active ? 'rgba(122,162,255,.25)' : 'rgba(7,9,18,.5)';
+      ctx.strokeStyle = active ? 'var(--accent)' : 'var(--border)';
+      ctx.lineWidth = active ? 2 : 1;
+      ctx.beginPath();ctx.arc(x,y,18,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle = active ? 'var(--ink)' : 'var(--muted)';
+      ctx.font='600 11px JetBrains Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(t, x, y);
+    }
+    drawNode(rootX, rootY, '<s>', true);
+    // level 1
+    tree.children.forEach((n1,i)=>{
+      const x1 = padL + levelW; const y1 = padT + (H-padT-padB) * (i+1)/(tree.children.length+1);
+      // edge
+      const beamHasL1 = beams.some(b=>b.path[1]===n1.tok);
+      ctx.strokeStyle = beamHasL1 ? 'rgba(122,162,255,.7)' : 'rgba(122,162,255,.15)';
+      ctx.lineWidth = beamHasL1 ? 2 : 1;
+      ctx.beginPath();ctx.moveTo(rootX+18,rootY);ctx.lineTo(x1-18,y1);ctx.stroke();
+      ctx.fillStyle = 'var(--dim)'; ctx.font='10px JetBrains Mono';
+      ctx.fillText(n1.lp.toFixed(1), (rootX+x1)/2, (rootY+y1)/2 - 4);
+      drawNode(x1, y1, n1.tok, beamHasL1);
+      // level 2
+      n1.children.forEach((n2,j)=>{
+        const x2 = padL + 2*levelW; const y2 = padT + (H-padT-padB) * (i*3+j+1)/(tree.children.length*3+1);
+        const beamHasL2 = beams.some(b=>b.path[1]===n1.tok && b.path[2]===n2.tok);
+        ctx.strokeStyle = beamHasL2 ? 'rgba(122,162,255,.6)' : 'rgba(122,162,255,.08)';
+        ctx.lineWidth = beamHasL2 ? 1.5 : 0.8;
+        ctx.beginPath();ctx.moveTo(x1+18,y1);ctx.lineTo(x2-15,y2);ctx.stroke();
+        drawNode(x2, y2, n2.tok, beamHasL2);
+        // level 3 — show only beam paths
+        n2.children.forEach((n3,k3)=>{
+          const x3 = padL + 3*levelW; const y3 = padT + (H-padT-padB) * (i*9+j*3+k3+1)/(tree.children.length*9+1);
+          const beamHasL3 = beams.some(b=>b.path[1]===n1.tok && b.path[2]===n2.tok && b.path[3]===n3.tok);
+          if (beamHasL3){
+            ctx.strokeStyle='rgba(255,209,102,.7)'; ctx.lineWidth=2;
+            ctx.beginPath();ctx.moveTo(x2+15,y2);ctx.lineTo(x3-15,y3);ctx.stroke();
+            drawNode(x3, y3, n3.tok, true);
+          }
+        });
+      });
+    });
+    if (beams.length){
+      const best = beams[0];
+      document.getElementById('beam-out').textContent = best.path.slice(1).join(' ');
+      document.getElementById('beam-lp').textContent = best.lp.toFixed(2);
+    }
+    document.getElementById('beam-kv').textContent = k;
+  }
+  document.getElementById('beam-k').addEventListener('input', draw);
+  document.getElementById('beam-go').addEventListener('click', () => {
+    const k = +document.getElementById('beam-k').value;
+    selected = decode(k);
+    draw();
+  });
+  window.addEventListener('resize', resize);
+  window.beamDraw = draw;
+  resize();
+})();
+
 // Init progress + streak UI now that nav DOM exists
 updateProgressRing();
 updateStreakUI();
+
+/* ================== FIRST-VISIT TOUR ================== */
+(function(){
+  const TOUR_KEY = 'aizh_tour_seen';
+  if (document.body.classList.contains('mode-lesson')) return;
+  try { if (localStorage.getItem(TOUR_KEY)) return; } catch {}
+  const steps = [
+    {h:'Welcome 👋', b:'Zero-to-Hero AI in 14 phases. Skim the roadmap below — each phase is a click away. ~30 weeks, 10–20 hrs/week.'},
+    {h:'Press ⌘K (Ctrl+K) anytime', b:'Search across <b>every</b> phase, glossary term, paper, resource, and demo. Type <code>"RoPE"</code>, <code>"prompt caching"</code>, or <code>"agent"</code> and jump straight there.'},
+    {h:'Play with the math', b:'Click any phase → <b>"Open lesson ↗"</b>. Inside: a multi-section modal with story, a real interactive game, code you can copy, mini-quiz, and 5+ curated free deep-dives.'},
+    {h:'Use <kbd>j</kbd> <kbd>k</kbd> to navigate', b:'<kbd>j</kbd>/<kbd>k</kbd> moves between phase cards. <kbd>/</kbd> focuses search. <kbd>?</kbd> shows this tour again. Lots of shortcuts. You\'re ready — go.'},
+  ];
+  let i = 0;
+  const bg = document.getElementById('tourBg');
+  const title = document.getElementById('tourTitle');
+  const body = document.getElementById('tourBody');
+  const dots = document.getElementById('tourDots');
+  const nextBtn = document.getElementById('tourNext');
+  function render(){
+    title.textContent = steps[i].h;
+    body.innerHTML = steps[i].b;
+    dots.innerHTML = steps.map((_,j)=>`<span class="${j===i?'active':''}"></span>`).join('');
+    nextBtn.textContent = i === steps.length-1 ? 'Start' : 'Next →';
+  }
+  function close(){
+    bg.classList.remove('open');
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch {}
+  }
+  nextBtn.addEventListener('click', () => { if (i < steps.length-1){ i++; render(); } else close(); });
+  document.getElementById('tourSkip').addEventListener('click', close);
+  bg.addEventListener('click', e => { if (e.target === bg) close(); });
+  document.addEventListener('keydown', e => {
+    if (!bg.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'Enter' || e.key === 'ArrowRight') nextBtn.click();
+  });
+  // Expose for ? key
+  window.openTour = () => { i = 0; render(); bg.classList.add('open'); };
+  render();
+  bg.classList.add('open');
+})();
+
+/* ================== KEYBOARD NAV ================== */
+(function(){
+  if (document.body.classList.contains('mode-lesson')) return;
+  function focused() {
+    const t = document.activeElement;
+    return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+  }
+  let gPressed = false;
+  document.addEventListener('keydown', e => {
+    if (focused() && e.key !== 'Escape') return;
+    // Palette already binds Cmd/Ctrl+K
+    if (e.key === '/') {
+      e.preventDefault();
+      if (typeof openPalette === 'function') openPalette();
+      return;
+    }
+    if (e.key === '?') { e.preventDefault(); if (window.openTour) window.openTour(); return; }
+    if (e.key === 'g') {
+      if (gPressed) { window.scrollTo({top:0, behavior:'smooth'}); gPressed = false; }
+      else { gPressed = true; setTimeout(()=>gPressed=false, 600); }
+      return;
+    }
+    if (e.key === 'G') { window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'}); return; }
+    if (e.key === 'j' || e.key === 'k') {
+      const phases = Array.from(document.querySelectorAll('#phases .phase'));
+      if (!phases.length) return;
+      const mid = innerHeight/2;
+      const closest = phases.map((el,idx)=>({el,idx,d:Math.abs(el.getBoundingClientRect().top + el.offsetHeight/2 - mid)})).sort((a,b)=>a.d-b.d)[0];
+      const target = phases[Math.max(0, Math.min(phases.length-1, closest.idx + (e.key==='j'?1:-1)))];
+      target.scrollIntoView({behavior:'smooth', block:'center'});
+      e.preventDefault();
+    }
+    if (e.key === 'o' || e.key === 'Enter') {
+      const phases = Array.from(document.querySelectorAll('#phases .phase'));
+      if (!phases.length) return;
+      const mid = innerHeight/2;
+      const closest = phases.map(el=>({el,d:Math.abs(el.getBoundingClientRect().top + el.offsetHeight/2 - mid)})).sort((a,b)=>a.d-b.d)[0];
+      const link = closest.el.querySelector('.btn-open-lesson');
+      if (link) { window.open(link.href, '_blank', 'noopener'); e.preventDefault(); }
+    }
+  });
+})();
 
 // Full-page lesson mode: ?lesson=N opens a phase as a standalone page (new-tab UX)
 (function(){
