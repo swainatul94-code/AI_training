@@ -1,11 +1,12 @@
 // Cache-first service worker for AI Zero → Hero
 // Single-file site, so we just cache the shell + assets and serve offline.
-const VERSION = 'aizh-v3';
+const VERSION = 'aizh-v4';
 // Critical = shell that MUST cache atomically, or install fails and old SW keeps serving.
 const CRITICAL = [
   './',
   './index.html',
   './styles.css',
+  './app.js',
   './manifest.webmanifest',
 ];
 // Optional = nice-to-have, allowed to fail individually.

@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'; frame-src 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <title>AI Zero → Hero · Interactive Course + Games</title>
 <style>
 :root{
@@ -3787,7 +3790,7 @@ function refreshBadges(){
 }
 
 /* ============================== RENDER ============================== */
-function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 
 function switchView(v){
   currentView = v;
@@ -3917,7 +3920,7 @@ function renderPhase(){
       const fb = saved.shown ? `<div class="feedback info"><b>Model answer:</b> ${escapeHtml(q.model)}<br><br><b>Rubric:</b> ${q.rubric.map(r=>escapeHtml(r)).join(" · ")}</div>` : "";
       return `<div class="quiz">
         <div class="q">Q${i+1}. ${escapeHtml(q.q)}</div>
-        <textarea id="short-${i}" placeholder="Your answer...">${saved.text||""}</textarea>
+        <textarea id="short-${i}" placeholder="Your answer...">${escapeHtml(saved.text||"")}</textarea>
         <div class="actions">
           <button onclick="saveShort(${i})">Save</button>
           <button class="ghost" onclick="revealShort(${i})">Reveal model</button>
