@@ -460,7 +460,8 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
   <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Toggle navigation" aria-expanded="false">
     <span></span><span></span><span></span>
   </button>
-  <div class="brand" aria-hidden="true">⚡ AI Zero → Hero</div>
+  <a class="brand" href="index.html" title="Back to the main site" style="text-decoration:none">⚡ AI Zero → Hero</a>
+  <a class="home-link" href="index.html" title="Go to the main site" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:rgba(122,162,255,.12);border:1px solid rgba(122,162,255,.3);color:var(--accent);font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;flex-shrink:0">← Main site</a>
   <div class="stats" role="group" aria-label="Player stats">
     <div class="stat lvl" aria-label="Level">Lv <b id="level">1</b></div>
     <div class="xp-bar" role="progressbar" aria-label="XP progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="xp-bar"><div id="xp-bar-fill"></div></div>
@@ -482,6 +483,7 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
 <div class="body">
   <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleDrawer()"></div>
   <aside id="sidebar">
+    <a href="index.html" title="Back to the main site" style="display:flex;align-items:center;gap:8px;padding:10px 12px;margin-bottom:10px;border-radius:8px;background:rgba(122,162,255,.1);border:1px solid rgba(122,162,255,.28);color:var(--accent);font-size:13px;font-weight:600;text-decoration:none">← Back to main site</a>
     <nav class="tabs">
       <button data-view="phases" class="active" onclick="switchView('phases')">Phases</button>
       <button data-view="games" onclick="switchView('games')">Games</button>
