@@ -50,6 +50,40 @@
   --ease-out:cubic-bezier(.16,1,.3,1);
 }
 html{scroll-behavior:smooth;scroll-padding-top:72px}
+/* Light mode overrides */
+body.theme-light{
+  --bg:#f7f8fb;
+  --bg-grad:radial-gradient(ellipse 80% 60% at 20% 0%,rgba(122,162,255,.18),transparent 60%),
+            radial-gradient(ellipse 70% 50% at 80% 30%,rgba(157,122,255,.14),transparent 60%),
+            radial-gradient(ellipse 60% 80% at 50% 100%,rgba(94,194,255,.12),transparent 60%),
+            #f4f6fb;
+  --panel:rgba(255,255,255,.85);
+  --panel-2:rgba(255,255,255,.95);
+  --panel-solid:#ffffff;
+  --border:rgba(60,72,100,.18);
+  --border-strong:rgba(122,162,255,.55);
+  --ink:#0e1422;
+  --muted:#4a5878;
+  --dim:#7884a0;
+  --shadow-sm:0 1px 2px rgba(20,40,80,.08),0 2px 6px rgba(20,40,80,.06);
+  --shadow-md:0 6px 16px rgba(20,40,80,.12),0 2px 6px rgba(20,40,80,.08);
+  --shadow-lg:0 24px 48px rgba(20,40,80,.18),0 8px 16px rgba(20,40,80,.1);
+  --shadow-glow:0 0 0 1px rgba(122,162,255,.4),0 12px 40px rgba(122,162,255,.22);
+}
+body.theme-light .nav{background:rgba(255,255,255,.75)}
+body.theme-light .nav.scrolled{background:rgba(255,255,255,.92)}
+body.theme-light pre, body.theme-light .codeblock{
+  background:linear-gradient(180deg,#1a1f30,#0e1422) !important;
+}
+body.theme-light .codeblock pre code{color:#d3dcef}
+body.theme-light code{background:rgba(255,209,102,.18);color:#9b6b00;border-color:rgba(255,209,102,.3)}
+body.theme-light .demo-canvas-wrap, body.theme-light .game-stage{background:rgba(245,247,251,.6)}
+body.theme-light .demo-canvas-wrap canvas, body.theme-light .game-stage canvas{background:#ffffff}
+body.theme-light .modal{background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(248,250,253,.99))}
+body.theme-light .palette{background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(248,250,253,.99))}
+body.theme-light .tour-card{background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(248,250,253,.99))}
+body.theme-light .modal-header{background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(255,255,255,.9))}
+body.theme-light .demos-wrap{background:rgba(255,255,255,.65)}
 body{
   background:var(--bg-grad);
   background-attachment:fixed;
@@ -1345,6 +1379,7 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
       <a href="#why">Why</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#playground">Playground</a>
+      <a href="#flashcards">Flashcards</a>
       <a href="#glossary">Glossary</a>
       <a href="#papers">Papers</a>
       <a href="#faq">FAQ</a>
@@ -1353,6 +1388,8 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
     <button class="kbd-trigger" id="kbdTrigger" title="Search everything (Ctrl/Cmd+K)">
       <span>Search</span> <kbd>⌘K</kbd>
     </button>
+    <button class="streak-chip" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit"><span id="themeIco">🌙</span></button>
+    <button class="streak-chip" id="soundBtn" title="Toggle sound" aria-label="Toggle sound effects" style="background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit"><span id="soundIco">🔊</span></button>
     <div class="streak-chip cold" id="streakChip" title="Daily learning streak"><span>🔥</span><span id="streakNum">0</span></div>
     <div class="nav-progress" id="navProgress" title="Phases completed">
       <div class="ring">
@@ -1371,6 +1408,7 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
       <span class="pct" id="progPct">0%</span>
       <span class="lbl">complete</span>
     </div>
+    <button class="streak-chip" id="shareBtn" title="Generate a certificate / share card" aria-label="Generate certificate" style="background:rgba(255,209,102,.1);border:1px solid rgba(255,209,102,.35);color:var(--gold);cursor:pointer;font-family:inherit">🏆</button>
     <a href="#roadmap" class="nav-cta">Start free →</a>
   </div>
 </nav>
@@ -1620,6 +1658,46 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
   </div>
 </section>
 
+<!-- ======= FLASHCARDS ======= -->
+<section class="block" id="flashcards">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="section-eyebrow">Mastery</span>
+      <h2><span class="grad">Flashcards</span> with spaced repetition</h2>
+      <p>SM-2 algorithm decides what to show you next. Hard cards come back sooner. Easy ones fade into the background. Free, no account.</p>
+    </div>
+    <div class="reveal" style="max-width:680px;margin:0 auto">
+      <div id="fc-front" style="background:linear-gradient(180deg,rgba(20,26,42,.7),rgba(14,18,30,.85));border:1px solid var(--border-strong);border-radius:18px;padding:48px 36px;min-height:240px;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer;transition:all .25s;backdrop-filter:blur(10px);box-shadow:var(--shadow-lg)">
+        <div>
+          <div id="fc-q" style="font-size:22px;font-weight:600;color:var(--ink);line-height:1.5"></div>
+          <div id="fc-back" style="margin-top:24px;font-size:16px;color:var(--muted);line-height:1.65;display:none"></div>
+        </div>
+      </div>
+      <div id="fc-rate" style="display:none;margin-top:16px;text-align:center">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">How well did you remember?</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button data-q="0" class="fc-btn" style="background:rgba(255,107,107,.15);border-color:var(--err);color:var(--err)">Forgot</button>
+          <button data-q="2" class="fc-btn" style="background:rgba(255,181,71,.15);border-color:var(--warn);color:var(--warn)">Hard</button>
+          <button data-q="4" class="fc-btn" style="background:rgba(122,162,255,.15);border-color:var(--accent);color:var(--accent)">Good</button>
+          <button data-q="5" class="fc-btn" style="background:rgba(62,207,142,.15);border-color:var(--ok);color:var(--ok)">Easy</button>
+        </div>
+      </div>
+      <div id="fc-show" style="text-align:center;margin-top:16px">
+        <button class="demo-btn" id="fc-flip">Tap to reveal answer ↻</button>
+      </div>
+      <div id="fc-stats" style="display:flex;gap:20px;justify-content:center;margin-top:24px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-family:'JetBrains Mono',monospace">
+        <span><b style="color:var(--accent)">due</b> <span id="fc-due">—</span></span>
+        <span><b style="color:var(--ok)">mastered</b> <span id="fc-mas">—</span></span>
+        <span><b style="color:var(--gold)">streak</b> <span id="fc-st">—</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+<style>
+.fc-btn{padding:10px 18px;border-radius:10px;border:1px solid;font-weight:600;font-size:13.5px;cursor:pointer;font-family:inherit;transition:all .15s}
+.fc-btn:hover{transform:translateY(-2px)}
+</style>
+
 <!-- ======= GLOSSARY ======= -->
 <section class="block" id="glossary">
   <div class="container">
@@ -1703,6 +1781,26 @@ footer .built{font-size:12px;margin-top:14px;opacity:.7}
       <span><kbd>↑↓</kbd> navigate</span>
       <span><kbd>↵</kbd> open</span>
       <span><kbd>esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="certBg" role="dialog" aria-modal="true" aria-labelledby="certTitle" style="z-index:110">
+  <div class="modal" style="max-width:760px">
+    <button class="modal-close" id="certClose" aria-label="Close">×</button>
+    <div class="modal-body" style="padding:28px 32px">
+      <h2 id="certTitle" style="font-family:'Space Grotesk',sans-serif;font-size:22px;margin-bottom:8px">🏆 Share your progress</h2>
+      <p style="color:var(--muted);font-size:14px;margin-bottom:18px">Type your name (or handle). Choose a format. Download as PNG.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <input type="text" id="certName" placeholder="Your name or @handle" autocomplete="off" style="flex:1;min-width:200px;padding:11px 14px;background:rgba(7,9,18,.5);border:1px solid var(--border);border-radius:8px;color:var(--ink);font-size:14px">
+        <button class="demo-btn" id="certPick0">Certificate</button>
+        <button class="demo-btn alt" id="certPick1">Share Card</button>
+      </div>
+      <canvas id="certCanvas" width="1080" height="680" style="width:100%;border:1px solid var(--border);border-radius:8px;display:block;background:#0a0e16"></canvas>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="demo-btn" id="certDownload">⬇ Download PNG</button>
+        <button class="demo-btn alt" id="certCopy">📋 Copy text to share</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2423,6 +2521,7 @@ function togglePhase(n){
     PROG.done[n] = new Date().toISOString();
     fireConfetti();
     bumpStreak();
+    if (window.aizhBeep) window.aizhBeep('win');
   }
   saveProg(PROG);
   renderPhases();
@@ -2626,7 +2725,7 @@ function openPhase(n){
       <div class="quiz-explain ${ans!==undefined?'show':''}">${q.explain}</div>
     </div>`;
   });
-  html += `<div class="quiz-score" id="quizScore-${n}"></div></div></div>`;
+  html += `<div class="quiz-score" id="quizScore-${n}"></div>${renderTutorBlock(n)}</div></div>`;
 
   // RESOURCES
   html += `<div class="modal-section" id="resources-${n}">
@@ -2713,6 +2812,7 @@ function wireModal(n){
       });
       // show explanation
       b.parentElement.parentElement.querySelector('.quiz-explain').classList.add('show');
+      if (window.aizhBeep) window.aizhBeep(oi === correct ? 'ok' : 'wrong');
       updateQuizScore(ph);
     });
   });
@@ -2728,6 +2828,120 @@ function wireModal(n){
   document.querySelectorAll('[data-modal-close]').forEach(b => {
     b.addEventListener('click', closeModal);
   });
+  // Tutor wiring
+  document.querySelectorAll('[data-tutor-key]').forEach(b => b.addEventListener('click', tutorPromptForKey));
+  document.querySelectorAll('[data-tutor-ask]').forEach(b => {
+    b.addEventListener('click', () => tutorAsk(+b.dataset.tutorAsk));
+  });
+  document.querySelectorAll('[data-tutor-enable]').forEach(b => b.addEventListener('click', () => {
+    const ok = confirm('Enable the AI tutor?\n\nThe feature requires pasting your Anthropic API key into this tab. It will be held in sessionStorage only and used for direct calls to api.anthropic.com.\n\nDo NOT enable on shared / public computers. Continue?');
+    if (!ok) return;
+    try { localStorage.setItem(TUTOR_ENABLED_KEY, '1'); } catch {}
+    // re-open current phase to re-render with tutor block
+    closeModal(); setTimeout(() => openPhase(n), 50);
+  }));
+  document.querySelectorAll('[data-tutor-disable]').forEach(b => b.addEventListener('click', () => {
+    try { localStorage.removeItem(TUTOR_ENABLED_KEY); sessionStorage.removeItem(TUTOR_KEY); } catch {}
+    closeModal(); setTimeout(() => openPhase(n), 50);
+  }));
+}
+
+const TUTOR_KEY = 'aizh_anthropic_key';
+const TUTOR_ENABLED_KEY = 'aizh_tutor_enabled';
+function tutorEnabled(){
+  try { return localStorage.getItem(TUTOR_ENABLED_KEY) === '1'; } catch { return false; }
+}
+function getTutorKey(){
+  // sessionStorage ONLY — cleared on tab close. Never persisted across sessions.
+  try { return sessionStorage.getItem(TUTOR_KEY) || ''; } catch { return ''; }
+}
+function renderTutorBlock(n){
+  if (!tutorEnabled()) {
+    return `<div style="margin-top:24px;padding:16px 18px;border-radius:10px;background:rgba(255,255,255,.03);border:1px dashed var(--border)">
+      <div style="font-size:13px;color:var(--muted);line-height:1.55">
+        <b style="color:var(--ink)">🎓 Optional: enable the AI tutor</b><br>
+        The tutor uses Claude Haiku to grade short-answer attempts. It requires <b>your own</b> Anthropic API key. The key is held in this tab's sessionStorage only (never persisted, never sent anywhere except <code>api.anthropic.com</code>). On a shared/public computer or any origin you don't fully trust, leave this off.
+      </div>
+      <button class="demo-btn alt" style="margin-top:10px" data-tutor-enable>Enable AI tutor (advanced)</button>
+    </div>`;
+  }
+  return `<div class="tutor-block" style="margin-top:24px;padding:18px 20px;border-radius:12px;background:rgba(157,122,255,.06);border:1px solid rgba(157,122,255,.25)">
+    <h4 style="margin:0 0 10px;font-size:14px;font-weight:700;color:var(--accent2);letter-spacing:.04em;text-transform:uppercase">🎓 Ask the AI tutor</h4>
+    <p style="font-size:13.5px;color:var(--muted);margin:0 0 10px;line-height:1.55">Your API key stays in this tab's sessionStorage. Cleared on close. <button style="background:none;border:none;color:var(--err);font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline" data-tutor-disable>Disable tutor</button></p>
+    <textarea id="tutorInput-${n}" placeholder="Type a short-answer question or paste your attempt for grading…" rows="3" style="width:100%;background:rgba(7,9,18,.5);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--ink);font-family:inherit;font-size:13.5px;resize:vertical;line-height:1.5"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+      <button class="demo-btn" data-tutor-ask="${n}">▸ Ask tutor</button>
+      <button class="demo-btn alt" data-tutor-key>🔑 Set / change key</button>
+      <span id="tutorStatus-${n}" style="font-size:12px;color:var(--dim)"></span>
+    </div>
+    <div id="tutorOutput-${n}" style="margin-top:14px;display:none;padding:12px 14px;border-radius:8px;background:rgba(7,9,18,.6);border-left:3px solid var(--accent2);font-size:14px;line-height:1.65;color:var(--ink);white-space:pre-wrap"></div>
+  </div>`;
+}
+function tutorPromptForKey(){
+  const cur = getTutorKey();
+  const k = prompt(
+    '⚠ Anthropic API KEY — paste only on a device you trust.\n\n' +
+    'The key stays in this tab\'s sessionStorage. Cleared when you close the tab. Never persisted. Used only for direct calls to api.anthropic.com.\n\n' +
+    'Risks: any other script on this origin, a malicious browser extension, or injected content could read this key while the tab is open.\n\n' +
+    'On shared / public computers: cancel.\n\n' +
+    'Get a key: https://console.anthropic.com/settings/keys',
+    cur
+  );
+  if (k === null) return;
+  try { sessionStorage.setItem(TUTOR_KEY, k.trim()); } catch {}
+  alert(k.trim() ? 'Key saved (this tab only).' : 'Key cleared.');
+}
+async function tutorAsk(n){
+  const key = getTutorKey();
+  if (!key) { tutorPromptForKey(); if (!getTutorKey()) return; }
+  const phase = PHASES.find(p => p.n === n);
+  const deep = Object.assign({}, PHASE_DEEP[n], PHASE_EXTRA[n] || {});
+  const input = document.getElementById(`tutorInput-${n}`).value.trim();
+  if (!input) { alert('Type a question or your attempt first.'); return; }
+  const status = document.getElementById(`tutorStatus-${n}`);
+  const out = document.getElementById(`tutorOutput-${n}`);
+  status.textContent = 'asking Claude Haiku…';
+  out.style.display = 'block';
+  out.textContent = '';
+  const system = `You are a strict but kind AI tutor for Phase ${n} (${phase.name}) of the AI Zero → Hero course.
+Topics in this phase: ${(phase.topics || []).join(', ')}.
+Key technical context: ${(deep.story || []).join(' ').replace(/<[^>]+>/g,'')}.
+
+When the learner submits an answer or question:
+1. If it's a question, answer it precisely and tie it to this phase's material.
+2. If it's an attempted answer, grade it: identify what's right, what's wrong, and what's missing in 3-5 bullet points. Then give a corrected one-paragraph model answer.
+Always be concrete. Reference specific terms when relevant. Never invent fake citations.`;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': getTutorKey(),
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body: JSON.stringify({
+        model:'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system,
+        messages:[{role:'user', content: input}],
+      }),
+    });
+    if (!resp.ok){
+      const err = await resp.text();
+      status.textContent = '';
+      out.innerHTML = `<span style="color:var(--err)">Error ${resp.status}.</span>\n${escapeHtml(err.slice(0,500))}`;
+      return;
+    }
+    const data = await resp.json();
+    const text = (data.content || []).map(b => b.text || '').join('');
+    status.textContent = `· ${data.usage?.input_tokens || 0} in / ${data.usage?.output_tokens || 0} out`;
+    out.textContent = text;
+    if (window.aizhBeep) window.aizhBeep('ok');
+  } catch (e) {
+    status.textContent = '';
+    out.innerHTML = `<span style="color:var(--err)">Network error.</span>\n${escapeHtml(e.message || String(e))}`;
+  }
 }
 /* ================== PHASE GAMES (5 mini-games) ================== */
 let _activeGameCtrl = null;
@@ -4858,6 +5072,284 @@ renderAttention();
 updateProgressRing();
 updateStreakUI();
 
+/* ================== FLASHCARDS (SM-2) ================== */
+(function(){
+  // Build deck from glossary
+  const DECK = GLOSSARY.map(([term, def]) => ({q:`What is "${term}"?`, a: def, id:'g:'+term}));
+  // Add a handful of derived cards from PHASE_DEEP quizzes (text-form)
+  Object.entries(PHASE_DEEP).forEach(([n, d]) => {
+    (d.quiz || []).forEach((q, qi) => {
+      DECK.push({q: q.q, a: q.opts[q.correct] + ' — ' + q.explain.replace(/<[^>]+>/g,''), id:`p${n}q${qi}`});
+    });
+  });
+  const KEY = 'aizh_fc_v1';
+  function loadFC(){ try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return {}; } }
+  function saveFC(s){ try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {} }
+  let state = loadFC();
+  if (!state.cards) state.cards = {};
+  if (!state.streak) state.streak = 0;
+  if (!state.last) state.last = null;
+  // SM-2 update
+  function sm2(card, q){
+    // q: 0=forgot, 2=hard, 4=good, 5=easy
+    if (!card.ef) card.ef = 2.5;
+    if (!card.reps) card.reps = 0;
+    if (!card.interval) card.interval = 0;
+    if (q < 3) { card.reps = 0; card.interval = 1; }
+    else {
+      card.reps++;
+      if (card.reps === 1) card.interval = 1;
+      else if (card.reps === 2) card.interval = 6;
+      else card.interval = Math.round(card.interval * card.ef);
+      card.ef = Math.max(1.3, card.ef + (.1 - (5-q) * (.08 + (5-q) * .02)));
+    }
+    card.due = Date.now() + card.interval * 86400000;
+    card.lastQ = q;
+    return card;
+  }
+  function pickNext(){
+    const now = Date.now();
+    // Due cards first
+    let due = DECK.filter(c => {
+      const s = state.cards[c.id];
+      return !s || (s.due || 0) <= now;
+    });
+    if (!due.length) due = DECK; // nothing due — recycle
+    // Prefer never-seen + hardest
+    due.sort((a, b) => {
+      const sa = state.cards[a.id], sb = state.cards[b.id];
+      const pa = sa ? (sa.ef || 2.5) : 1;
+      const pb = sb ? (sb.ef || 2.5) : 1;
+      return pa - pb;
+    });
+    return due[Math.floor(Math.random() * Math.min(8, due.length))];
+  }
+  let current = null;
+  let revealed = false;
+  const elQ = document.getElementById('fc-q');
+  const elA = document.getElementById('fc-back');
+  const elRate = document.getElementById('fc-rate');
+  const elShow = document.getElementById('fc-show');
+  const elFront = document.getElementById('fc-front');
+  function render(){
+    current = pickNext();
+    revealed = false;
+    elQ.textContent = current.q;
+    elA.textContent = current.a;
+    elA.style.display = 'none';
+    elRate.style.display = 'none';
+    elShow.style.display = 'block';
+    updateStats();
+  }
+  function flip(){
+    revealed = true;
+    elA.style.display = 'block';
+    elRate.style.display = 'block';
+    elShow.style.display = 'none';
+    if (window.aizhBeep) window.aizhBeep('click');
+  }
+  function rate(q){
+    if (!current) return;
+    const card = state.cards[current.id] || {id:current.id};
+    sm2(card, q);
+    state.cards[current.id] = card;
+    // streak: increment if rated today, only once
+    const today = new Date().toDateString();
+    if (state.lastDay !== today) {
+      state.streak = (state.last && (Date.now() - state.last) < 86400000 * 2) ? state.streak + 1 : 1;
+      state.lastDay = today;
+    }
+    state.last = Date.now();
+    saveFC(state);
+    if (window.aizhBeep) window.aizhBeep(q >= 4 ? 'ok' : 'wrong');
+    render();
+  }
+  elFront.addEventListener('click', () => { if (!revealed) flip(); });
+  document.getElementById('fc-flip').addEventListener('click', flip);
+  document.querySelectorAll('.fc-btn').forEach(b => b.addEventListener('click', () => rate(+b.dataset.q)));
+  function updateStats(){
+    const now = Date.now();
+    const seen = Object.values(state.cards);
+    const due = DECK.filter(c => { const s = state.cards[c.id]; return !s || (s.due || 0) <= now; }).length;
+    const mastered = seen.filter(c => (c.reps || 0) >= 3 && (c.ef || 2.5) >= 2.5).length;
+    document.getElementById('fc-due').textContent = due;
+    document.getElementById('fc-mas').textContent = mastered;
+    document.getElementById('fc-st').textContent = state.streak || 0;
+  }
+  render();
+  document.addEventListener('keydown', e => {
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+    if (!document.getElementById('flashcards').getBoundingClientRect().top < innerHeight && document.getElementById('flashcards').getBoundingClientRect().bottom > 0) return;
+    if (e.key === ' ' && !revealed) { e.preventDefault(); flip(); }
+    else if (revealed && '0124'.includes(e.key)) {
+      const map = {'0':0,'1':2,'2':2,'4':4,'5':5};
+      rate(map[e.key]);
+    }
+  });
+})();
+
+/* ================== CERTIFICATE + SHARE CARD ================== */
+(function(){
+  const bg = document.getElementById('certBg');
+  const cnv = document.getElementById('certCanvas');
+  const ctx = cnv.getContext('2d');
+  const name = document.getElementById('certName');
+  let mode = 0; // 0 = cert, 1 = share
+  function draw(){
+    const W = cnv.width, H = cnv.height;
+    const grad = ctx.createLinearGradient(0,0,W,H);
+    grad.addColorStop(0, '#070912');
+    grad.addColorStop(.5, '#1a1335');
+    grad.addColorStop(1, '#070912');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+    // border ribbon
+    ctx.strokeStyle = 'rgba(122,162,255,.55)'; ctx.lineWidth = 4;
+    ctx.strokeRect(28, 28, W-56, H-56);
+    ctx.strokeStyle = 'rgba(157,122,255,.4)'; ctx.lineWidth = 2;
+    ctx.strokeRect(46, 46, W-92, H-92);
+    // glow orbs
+    const orb1 = ctx.createRadialGradient(180,160,10,180,160,260);
+    orb1.addColorStop(0,'rgba(122,162,255,.45)'); orb1.addColorStop(1,'rgba(122,162,255,0)');
+    ctx.fillStyle = orb1; ctx.fillRect(0,0,W,H);
+    const orb2 = ctx.createRadialGradient(W-200,H-160,10,W-200,H-160,300);
+    orb2.addColorStop(0,'rgba(255,209,102,.35)'); orb2.addColorStop(1,'rgba(255,209,102,0)');
+    ctx.fillStyle = orb2; ctx.fillRect(0,0,W,H);
+    const pct = (typeof pctComplete === 'function') ? pctComplete() : 0;
+    const done = Object.keys((PROG && PROG.done) || {}).length;
+    const streak = (PROG && PROG.streak) || 0;
+    const nm = name.value.trim() || 'Anonymous Learner';
+    if (mode === 0) {
+      // CERTIFICATE
+      ctx.fillStyle = '#ffd166'; ctx.font = '600 18px Inter,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('AI ZERO → HERO', W/2, 110);
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '14px Inter,sans-serif';
+      ctx.fillText('CERTIFICATE OF PROGRESS', W/2, 138);
+      // name
+      ctx.fillStyle = '#fff'; ctx.font = '700 64px Space Grotesk,sans-serif';
+      ctx.fillText(nm, W/2, 250);
+      ctx.strokeStyle = 'rgba(122,162,255,.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(W/2-220, 280); ctx.lineTo(W/2+220, 280); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '20px Inter,sans-serif';
+      ctx.fillText('has completed ' + done + ' of 14 phases in the', W/2, 330);
+      ctx.fillText('AI Zero → Hero Engineering track.', W/2, 360);
+      // big number
+      ctx.font = '900 140px Space Grotesk,sans-serif';
+      const stops = [['#7aa2ff',0],['#9d7aff',.5],['#ffd166',1]];
+      const lg = ctx.createLinearGradient(W/2-200, 440, W/2+200, 540);
+      stops.forEach(([c,o])=>lg.addColorStop(o,c));
+      ctx.fillStyle = lg;
+      ctx.fillText(pct + '%', W/2, 500);
+      ctx.fillStyle = 'rgba(255,255,255,.65)'; ctx.font = '600 14px Inter,sans-serif';
+      ctx.fillText('PHASES · CHECKPOINTS · PROJECTS · QUIZZES', W/2, 540);
+      // footer
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '13px Inter,sans-serif';
+      ctx.fillText(new Date().toLocaleDateString() + '   ·   ' + streak + '-day streak   ·   swainatul94-code.github.io/AI_training', W/2, H-70);
+    } else {
+      // SHARE CARD
+      ctx.fillStyle = '#7aa2ff'; ctx.font = '600 16px Inter,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('AI ZERO → HERO', 80, 100);
+      ctx.fillStyle = '#fff'; ctx.font = '900 56px Space Grotesk,sans-serif';
+      ctx.fillText('I just hit', 80, 200);
+      const lg2 = ctx.createLinearGradient(80, 240, 600, 320);
+      lg2.addColorStop(0,'#7aa2ff'); lg2.addColorStop(.5,'#9d7aff'); lg2.addColorStop(1,'#ffd166');
+      ctx.fillStyle = lg2;
+      ctx.font = '900 120px Space Grotesk,sans-serif';
+      ctx.fillText(pct + '% complete', 80, 340);
+      ctx.fillStyle = '#fff'; ctx.font = '700 38px Space Grotesk,sans-serif';
+      ctx.fillText(done + ' of 14 phases shipped', 80, 410);
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '24px Inter,sans-serif';
+      ctx.fillText('Built nanoGPT, fine-tuned with DPO, shipped agents.', 80, 460);
+      ctx.fillText('— ' + nm, 80, 510);
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.font = '15px Inter,sans-serif';
+      ctx.fillText('🔥 ' + streak + '-day streak · learn AI free at swainatul94-code.github.io/AI_training', 80, H-80);
+    }
+  }
+  function open(){ bg.classList.add('open'); document.body.style.overflow = 'hidden'; draw(); }
+  function close(){ bg.classList.remove('open'); document.body.style.overflow = ''; }
+  document.getElementById('shareBtn').addEventListener('click', open);
+  document.getElementById('certClose').addEventListener('click', close);
+  bg.addEventListener('click', e => { if (e.target === bg) close(); });
+  document.getElementById('certPick0').addEventListener('click', () => { mode = 0; draw(); });
+  document.getElementById('certPick1').addEventListener('click', () => { mode = 1; draw(); });
+  name.addEventListener('input', draw);
+  document.getElementById('certDownload').addEventListener('click', () => {
+    cnv.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ai-zero-to-hero-${mode === 0 ? 'cert' : 'share'}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }, 'image/png');
+    if (window.aizhBeep) window.aizhBeep('win');
+  });
+  document.getElementById('certCopy').addEventListener('click', () => {
+    const pct = (typeof pctComplete === 'function') ? pctComplete() : 0;
+    const done = Object.keys((PROG && PROG.done) || {}).length;
+    const nm = name.value.trim() || 'a learner';
+    const txt = `I'm ${pct}% through AI Zero → Hero (${done}/14 phases). Building real LLMs from scratch.\n\nFree, animated, interactive: swainatul94-code.github.io/AI_training\n\n— ${nm}`;
+    navigator.clipboard.writeText(txt).then(() => {
+      const b = document.getElementById('certCopy');
+      const orig = b.textContent;
+      b.textContent = '✓ Copied';
+      setTimeout(() => b.textContent = orig, 1400);
+    });
+  });
+})();
+
+/* ================== THEME + SOUND ================== */
+(function(){
+  const themeBtn = document.getElementById('themeBtn');
+  const themeIco = document.getElementById('themeIco');
+  const soundBtn = document.getElementById('soundBtn');
+  const soundIco = document.getElementById('soundIco');
+  let theme = 'dark', sound = true;
+  try {
+    theme = localStorage.getItem('aizh_theme') || 'dark';
+    sound = localStorage.getItem('aizh_sound') !== '0';
+  } catch {}
+  function applyTheme(){
+    document.body.classList.toggle('theme-light', theme === 'light');
+    themeIco.textContent = theme === 'light' ? '☀️' : '🌙';
+    document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'light' ? '#f7f8fb' : '#0a0e16');
+  }
+  function applySound(){
+    soundIco.textContent = sound ? '🔊' : '🔇';
+    window.aizhSound = sound;
+  }
+  themeBtn.addEventListener('click', () => {
+    theme = theme === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem('aizh_theme', theme); } catch {}
+    applyTheme();
+    if (window.aizhBeep) window.aizhBeep('click');
+  });
+  soundBtn.addEventListener('click', () => {
+    sound = !sound;
+    try { localStorage.setItem('aizh_sound', sound ? '1' : '0'); } catch {}
+    applySound();
+    if (sound && window.aizhBeep) window.aizhBeep('click');
+  });
+  // tiny WebAudio synth — generates short tones, no asset deps
+  let ac = null;
+  window.aizhBeep = (kind) => {
+    if (!window.aizhSound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(); const g = ac.createGain();
+      const tones = {click:[660,.03], ok:[880,.08], win:[1200,.18], wrong:[220,.12]};
+      const [f, d] = tones[kind] || [440, .08];
+      o.frequency.value = f; o.type = kind === 'win' ? 'sine' : 'triangle';
+      g.gain.setValueAtTime(.0001, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(.18, ac.currentTime + .005);
+      g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d);
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + d + .02);
+    } catch {}
+  };
+  applyTheme(); applySound();
+})();
+
 /* ================== FIRST-VISIT TOUR ================== */
 (function(){
   const TOUR_KEY = 'aizh_tour_seen';
@@ -4954,8 +5446,13 @@ updateStreakUI();
   openPhase(n);
 })();
 
+// Register service worker for offline support (skips if running from file://)
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
 console.log('%cAI Zero → Hero','color:#7aa2ff;font-size:18px;font-weight:bold;font-family:Space Grotesk');
-console.log('%c⌘K (Ctrl+K) — search everything','color:#7aa2ff');
+console.log('%c⌘K (Ctrl+K) — search everything · ? = tour · / = palette · j/k = phases','color:#7aa2ff');
 console.log('%cBuilt with curiosity. Read the source — it\'s all here.','color:#a3b0c7');
 </script>
 

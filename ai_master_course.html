@@ -5200,11 +5200,19 @@ function render(){ renderSidebar(); renderMain(); refreshHeader(); paintStreakBa
 
 /* ============ Per-phase interactive games (ported from new UI) ============ */
 const PHASE_GAMES = {
+  0: {type:"setup",      title:"Setup wizard",            why:"Click the install steps in dependency order. Any skipped prereq locks the next step."},
   1: {type:"dotproduct", title:"Dot Product Playground", why:"Drag the arrowheads. Watch the <b>dot product</b>, angle and alignment update live. Parallel = max, perpendicular = 0, anti-parallel = min."},
+  2: {type:"vectorize",  title:"Vectorize the loop",      why:"Pick the numpy expression that replaces the Python loop. Vectorization is ~100× faster."},
   3: {type:"overfit",    title:"Overfitting Slider",      why:"Drag <b>polynomial degree</b> on noisy sine data. Watch train + test loss diverge. This is exactly why we regularize."},
+  4: {type:"backprop",   title:"Backprop step-by-step",   why:"Walk a forward + backward pass on <code>y = (a·b + c)²</code>. Chain rule made concrete."},
   5: {type:"bpestep",    title:"BPE Step-by-Step",        why:"Click <b>merge most-common pair</b> to greedily build vocabulary. The same algorithm GPT and Claude use, just slower."},
+  6: {type:"attention",  title:"Attention picker",        why:"Click any token. Watch where it attends. Notice 'it' look back at 'cat'."},
   7: {type:"losscurve",  title:"Training Loss Sandbox",   why:"Tune <b>learning rate</b> + <b>batch size</b> on a simulated training run. Too high explodes. Too low stalls. Find the sweet spot."},
+  8: {type:"lora",       title:"LoRA decomposition",      why:"Drag rank r. Watch the LoRA update B·A's parameter count shrink relative to W. This is why fine-tuning got cheap."},
+  9: {type:"prompt",     title:"Prompt + cost builder",   why:"Drop blocks in order. Watch token count + cached vs uncached cost. Cache the static parts."},
   10:{type:"retrieve",   title:"k-NN Retrieval Visualizer", why:"Click anywhere to drop a <b>query</b>. The k nearest 'documents' light up. This is what every RAG system does in higher dims."},
+  11:{type:"agent",      title:"ReAct agent trace",       why:"Step through reason → tool → observe → answer on a real research task. See how cost compounds."},
+  12:{type:"cost",       title:"Production cost calc",    why:"Tune req/s, prompt size, cache hit %. Get $/month + p99 latency. Don't ship without this number."},
 };
 let _phaseGameCtrl = null;
 function teardownPhaseGame(){ if (_phaseGameCtrl){_phaseGameCtrl.abort(); _phaseGameCtrl = null;} }
@@ -5213,12 +5221,322 @@ function mountPhaseGame(phaseId){
   const cfg = PHASE_GAMES[phaseId];
   const host = document.getElementById('phase-game-stage');
   if (!cfg || !host) return;
-  const dispatch = {dotproduct:gameDotProduct, overfit:gameOverfit, bpestep:gameBPEStep, losscurve:gameLossCurve, retrieve:gameRetrieve};
+  const dispatch = {
+    dotproduct:gameDotProduct, overfit:gameOverfit, bpestep:gameBPEStep,
+    losscurve:gameLossCurve, retrieve:gameRetrieve,
+    setup:gameSetup, vectorize:gameVectorize, backprop:gameBackprop,
+    attention:gameAttentionLegacy, lora:gameLoRA, prompt:gamePrompt,
+    agent:gameAgent, cost:gameCost,
+  };
   const fn = dispatch[cfg.type];
   if (!fn) return;
   const ctrl = new AbortController();
   _phaseGameCtrl = ctrl;
   fn(host, ctrl.signal);
+}
+
+function gameSetup(host, signal){
+  host.innerHTML = `
+    <div class="hint">🖥 <b>Click install steps in order.</b> Skipped prereqs lock the next step.</div>
+    <div id="setup-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"></div>
+    <div class="game-readout"><span id="setup-msg">Click Python first.</span></div>`;
+  const steps = [
+    {k:'python', l:'Python 3.11+', need:[]},
+    {k:'uv',     l:'uv', need:['python']},
+    {k:'git',    l:'Git', need:[]},
+    {k:'vscode', l:'VS Code', need:[]},
+    {k:'sdk',    l:'anthropic SDK', need:['python','uv']},
+    {k:'key',    l:'API key', need:['python']},
+    {k:'repo',   l:'GitHub repo', need:['git']},
+    {k:'call',   l:'First API call', need:['python','uv','sdk','key']},
+  ];
+  const done = new Set();
+  function render(){
+    const el = host.querySelector('#setup-board');
+    el.innerHTML = steps.map(s=>{
+      const ok = done.has(s.k);
+      const ready = s.need.every(n=>done.has(n));
+      const bg = ok?'rgba(62,207,142,.2)':ready?'rgba(122,162,255,.1)':'rgba(255,255,255,.03)';
+      const border = ok?'var(--ok)':ready?'var(--accent)':'var(--border)';
+      const color = ok?'var(--ok)':ready?'var(--ink)':'var(--dim)';
+      return `<button data-k="${s.k}" style="padding:14px;border-radius:10px;background:${bg};border:1px solid ${border};color:${color};font-weight:600;cursor:${ready||ok?'pointer':'not-allowed'};font-family:inherit;font-size:13px;text-align:left" ${ready||ok?'':'disabled'}>${ok?'✓':ready?'▸':'🔒'} ${s.l}</button>`;
+    }).join('');
+    el.querySelectorAll('button[data-k]').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const s = steps.find(x=>x.k===b.dataset.k);
+        if (s.need.every(n=>done.has(n))){done.add(s.k); render();
+          const left = steps.filter(s=>!done.has(s.k)).length;
+          host.querySelector('#setup-msg').textContent = left? `${left} left` : '🎉 done';
+        }
+      },{signal});
+    });
+  }
+  render();
+}
+
+function gameVectorize(host, signal){
+  host.innerHTML = `
+    <div class="hint">🏁 <b>Vectorize the loop.</b> Pick the numpy expression.</div>
+    <pre style="font-size:13px;padding:14px;background:rgba(7,9,18,.5);border:1px solid var(--border);border-radius:8px;margin:0">for i in range(len(a)):
+    out[i] = a[i] ** 2 + 3 * a[i] - 1</pre>
+    <div id="vec-opts" style="display:flex;flex-direction:column;gap:8px;margin-top:14px"></div>
+    <div class="game-readout"><span id="vec-msg"></span></div>`;
+  const opts = [
+    {t:'a**2 + 3*a - 1', ok:true},
+    {t:'np.sum(a**2) + 3*a - 1', ok:false},
+    {t:'a*a + 3 + a - 1', ok:false},
+    {t:'a.dot(a) + 3*a - 1', ok:false},
+  ];
+  const el = host.querySelector('#vec-opts');
+  el.innerHTML = opts.map((o,i)=>`<button data-i="${i}" style="text-align:left;padding:10px 14px;border-radius:8px;background:rgba(7,9,18,.5);border:1px solid var(--border);color:var(--ink);cursor:pointer;font-family:'JetBrains Mono';font-size:13px">${o.t}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      const i = +b.dataset.i;
+      el.querySelectorAll('button').forEach(x=>x.disabled=true);
+      opts.forEach((o,j)=>{
+        const btn = el.querySelector(`button[data-i="${j}"]`);
+        if (o.ok){btn.style.borderColor='var(--ok)'; btn.style.background='rgba(62,207,142,.12)';}
+        else if (j===i){btn.style.borderColor='var(--err)'; btn.style.background='rgba(255,107,107,.1)';}
+      });
+      host.querySelector('#vec-msg').innerHTML = opts[i].ok ? '<span class="ok">✓ Yep — one C-speed expression.</span>' : '<span class="err">Element-wise, not sum/dot.</span>';
+    },{signal});
+  });
+}
+
+function gameBackprop(host, signal){
+  host.innerHTML = `
+    <div class="hint">🧮 <b>Walk a backward pass.</b> y = (a·b + c)². Click Step.</div>
+    <canvas height="220"></canvas>
+    <div class="game-controls">
+      <button class="demo-btn" id="bp-step">▸ Step</button>
+      <button class="demo-btn alt" id="bp-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout"><span id="bp-label">Click Step to begin.</span></div>`;
+  const c = host.querySelector('canvas'); const ctx = c.getContext('2d');
+  let phase = 0; let W,H;
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    const nodes = [
+      {x:60, y:60, l:'a=2'}, {x:60, y:160, l:'b=3'}, {x:60, y:H-30, l:'c=1'},
+      {x:W*.42, y:110, l:'mul'}, {x:W*.65, y:140, l:'add'}, {x:W*.85, y:140, l:'sq'},
+    ];
+    const edges = [[0,3],[1,3],[3,4],[2,4],[4,5]];
+    const fwdVals = ['a=2','b=3','c=1','a·b=6','+c=7','y=49'];
+    const bwdVals = ['∂y/∂a=14','∂y/∂b=14','∂y/∂c=14','∂y/∂(ab)=14','∂y/∂(ab+c)=14','dy=1'];
+    edges.forEach(([i,j],ei)=>{
+      const active = (phase >= ei+1 && phase <= 5) || (phase >= 6 && phase-5 > (4-ei));
+      ctx.strokeStyle = active ? (phase<=5?'#7aa2ff':'#ff7ad4') : 'rgba(122,162,255,.25)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();ctx.moveTo(nodes[i].x+22,nodes[i].y);ctx.lineTo(nodes[j].x-22,nodes[j].y);ctx.stroke();
+    });
+    nodes.forEach((n,i)=>{
+      const active = (phase>=1 && phase<=5 && i<=phase) || (phase>=6 && i>=5-(phase-6));
+      ctx.fillStyle = active ? (phase<=5?'rgba(122,162,255,.2)':'rgba(255,122,212,.2)') : 'rgba(7,9,18,.6)';
+      ctx.strokeStyle = active ? (phase<=5?'#7aa2ff':'#ff7ad4') : 'rgba(80,100,140,.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();ctx.arc(n.x,n.y,22,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle = '#eef2fa'; ctx.font = '600 11px JetBrains Mono';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(n.l, n.x, n.y);
+      if (phase>=1 && phase<=5 && i<=phase){ctx.fillStyle='#7aa2ff'; ctx.font='600 11px Inter'; ctx.fillText(fwdVals[i], n.x, n.y+34);}
+      if (phase>=6 && i>=5-(phase-6)){ctx.fillStyle='#ff7ad4'; ctx.font='600 11px Inter'; ctx.fillText(bwdVals[i], n.x, n.y-34);}
+    });
+    const labels = ['Forward: load a','Forward: load b','Forward: load c','Forward: a·b','Forward: +c','Forward: square → y','Backward: dy=1','Backward: ∂y/∂(ab+c) = 2(ab+c) = 14','Backward: split into ∂y/∂(ab), ∂y/∂c', 'Backward: ∂y/∂a, ∂y/∂b via chain','✓ Done'];
+    host.querySelector('#bp-label').textContent = labels[Math.min(phase,labels.length-1)];
+  }
+  host.querySelector('#bp-step').addEventListener('click',()=>{phase=Math.min(10,phase+1); draw();},{signal});
+  host.querySelector('#bp-reset').addEventListener('click',()=>{phase=0; draw();},{signal});
+  window.addEventListener('resize',draw,{signal});
+  draw();
+}
+
+function gameAttentionLegacy(host, signal){
+  host.innerHTML = `
+    <div class="hint">🔦 <b>Click a token.</b> See where it attends.</div>
+    <div id="att-tokens" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+    <div id="att-attend" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div class="game-readout"><span id="att-msg"></span></div>`;
+  const tokens = ['The','cat','sat','on','the','mat','because','it','was','tired'];
+  const att = [
+    [1,0,0,0,0,0,0,0,0,0],[.3,1,0,0,0,0,0,0,0,0],[.15,.55,1,0,0,0,0,0,0,0],
+    [.1,.2,.45,1,0,0,0,0,0,0],[.08,.18,.2,.5,1,0,0,0,0,0],[.08,.4,.2,.45,.6,1,0,0,0,0],
+    [.05,.15,.4,.1,.1,.25,1,0,0,0],[.05,.78,.18,.05,.05,.15,.45,1,0,0],
+    [.05,.55,.1,.05,.05,.08,.2,.7,1,0],[.04,.6,.12,.05,.05,.1,.25,.8,.45,1],
+  ];
+  const top = host.querySelector('#att-tokens');
+  const bot = host.querySelector('#att-attend');
+  top.innerHTML = tokens.map((t,i)=>`<button data-i="${i}" style="padding:7px 12px;border-radius:7px;background:rgba(122,162,255,.1);border:1px solid rgba(122,162,255,.3);color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;font-size:13px">${t}</button>`).join('');
+  function paint(qi){
+    const row = att[qi]; const sum = row.reduce((a,b)=>a+b,0);
+    const norm = row.map(v=>v/sum);
+    bot.innerHTML = tokens.map((t,i)=>{
+      const op = .08 + norm[i]*.92;
+      return `<span style="padding:7px 12px;border-radius:7px;background:rgba(255,209,102,${op});color:#0a0e16;font-weight:600;font-size:13px;font-family:'JetBrains Mono'">${t}<br><span style="font-size:10px;opacity:.7">${(norm[i]*100).toFixed(0)}%</span></span>`;
+    }).join('');
+    host.querySelector('#att-msg').innerHTML = `<b>${tokens[qi]}</b> attends most to: <span style="color:var(--gold)">${tokens[norm.indexOf(Math.max(...norm.slice(0,qi+1)))]}</span>`;
+  }
+  top.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>paint(+b.dataset.i),{signal}));
+  paint(7);
+}
+
+function gameLoRA(host, signal){
+  host.innerHTML = `
+    <div class="hint">📐 <b>LoRA in pictures.</b> Adjust rank r.</div>
+    <canvas height="220"></canvas>
+    <div class="game-controls"><div class="demo-slider"><label>Rank r</label><input type="range" id="lo-r" min="1" max="32" step="1" value="8"><span class="val" id="lo-rv">8</span></div></div>
+    <div class="game-readout">
+      <span><b>W params</b><span id="lo-w">—</span></span>
+      <span><b>LoRA params</b><span id="lo-l">—</span></span>
+      <span><b>savings</b><span id="lo-s" class="ok">—</span></span>
+    </div>`;
+  const c = host.querySelector('canvas'); const ctx = c.getContext('2d');
+  const d = 64; let W,H;
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    const r = +host.querySelector('#lo-r').value;
+    const cellW = Math.min(2.2, (W*.32)/d);
+    const padL = 40;
+    ctx.fillStyle='#7aa2ff'; ctx.globalAlpha=.35; ctx.fillRect(padL,20,d*cellW,d*cellW); ctx.globalAlpha=1;
+    ctx.strokeStyle='var(--accent)'; ctx.lineWidth=1.5; ctx.strokeRect(padL,20,d*cellW,d*cellW);
+    ctx.fillStyle='#7aa2ff'; ctx.font='600 12px Inter'; ctx.fillText(`W (${d}×${d})`, padL, 12);
+    const bX = padL + d*cellW + 50;
+    ctx.fillStyle='#9d7aff'; ctx.globalAlpha=.5; ctx.fillRect(bX,20,r*cellW,d*cellW); ctx.globalAlpha=1;
+    ctx.strokeStyle='var(--accent2)'; ctx.strokeRect(bX,20,r*cellW,d*cellW);
+    ctx.fillStyle='#9d7aff'; ctx.fillText(`B (${d}×${r})`, bX, 12);
+    const aY = 20 + d*cellW + 30;
+    ctx.fillStyle='#ff7ad4'; ctx.globalAlpha=.5; ctx.fillRect(bX,aY,d*cellW,r*cellW); ctx.globalAlpha=1;
+    ctx.strokeStyle='#ff7ad4'; ctx.strokeRect(bX,aY,d*cellW,r*cellW);
+    ctx.fillStyle='#ff7ad4'; ctx.fillText(`A (${r}×${d})`, bX, aY-6);
+    const wp = d*d, lp = d*r + r*d;
+    const sav = (1 - lp/wp)*100;
+    host.querySelector('#lo-w').textContent = wp;
+    host.querySelector('#lo-l').textContent = lp;
+    host.querySelector('#lo-s').textContent = sav>0 ? sav.toFixed(0)+'%' : '—';
+    host.querySelector('#lo-rv').textContent = r;
+  }
+  host.querySelector('#lo-r').addEventListener('input',draw,{signal});
+  window.addEventListener('resize',draw,{signal});
+  draw();
+}
+
+function gamePrompt(host, signal){
+  host.innerHTML = `
+    <div class="hint">✍ <b>Build a prompt.</b> Watch token + cost.</div>
+    <div id="pr-bench" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <div id="pr-stage" style="min-height:60px;padding:12px;background:rgba(7,9,18,.5);border:1px dashed var(--border);border-radius:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center"></div>
+    <div class="game-readout">
+      <span><b>tokens</b><span id="pr-tok">0</span></span>
+      <span><b>uncached</b><span id="pr-c1" class="err">$0.0000</span></span>
+      <span><b>cached</b><span id="pr-c2" class="ok">$0.0000</span></span>
+      <span id="pr-msg" style="color:var(--gold)"></span>
+    </div>`;
+  const blocks = [
+    {k:'sys',l:'System prompt',tok:120,cache:true},
+    {k:'fs',l:'5 few-shot examples',tok:800,cache:true},
+    {k:'doc',l:'RAG doc',tok:4000,cache:true},
+    {k:'user',l:'User question',tok:35,cache:false},
+    {k:'cot',l:'"Think step by step"',tok:8,cache:false},
+    {k:'tool',l:'Tool definitions',tok:240,cache:true},
+  ];
+  let chosen = [];
+  function render(){
+    const bench = host.querySelector('#pr-bench');
+    bench.innerHTML = blocks.map(b=>`<button data-k="${b.k}" style="padding:8px 12px;border-radius:7px;background:rgba(122,162,255,.08);border:1px solid var(--border);color:var(--ink);cursor:pointer;font-family:inherit;font-size:12.5px">+ ${b.l} <span style="color:var(--dim);font-family:'JetBrains Mono'">${b.tok}t</span></button>`).join('');
+    bench.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{chosen.push(blocks.find(x=>x.k===b.dataset.k)); render();},{signal}));
+    const stage = host.querySelector('#pr-stage');
+    stage.innerHTML = chosen.length ? chosen.map((b,i)=>`<span style="padding:6px 10px;border-radius:6px;background:rgba(${b.cache?'62,207,142':'255,209,102'},.15);border:1px solid rgba(${b.cache?'62,207,142':'255,209,102'},.4);color:#fff;font-size:12.5px">${b.l} <button data-rm="${i}" style="background:none;border:none;color:var(--dim);cursor:pointer;margin-left:4px">×</button></span>`).join('') : '<span style="color:var(--dim);font-size:13px">Drop blocks to build</span>';
+    stage.querySelectorAll('button[data-rm]').forEach(b=>b.addEventListener('click',()=>{chosen.splice(+b.dataset.rm,1); render();},{signal}));
+    const tot = chosen.reduce((s,b)=>s+b.tok,0);
+    const cached = chosen.filter(b=>b.cache).reduce((s,b)=>s+b.tok,0);
+    const uncost = tot*3/1e6;
+    const cocost = (tot-cached)*3/1e6 + cached*0.3/1e6;
+    host.querySelector('#pr-tok').textContent = tot;
+    host.querySelector('#pr-c1').textContent = '$'+uncost.toFixed(4);
+    host.querySelector('#pr-c2').textContent = '$'+cocost.toFixed(4);
+    const save = uncost>0 ? Math.round((1-cocost/uncost)*100) : 0;
+    host.querySelector('#pr-msg').textContent = save>0 ? `caching saves ${save}%` : '';
+  }
+  render();
+}
+
+function gameAgent(host, signal){
+  host.innerHTML = `
+    <div class="hint">🤖 <b>Step a ReAct loop.</b></div>
+    <div id="ag-log" style="font-family:'JetBrains Mono';font-size:12.5px;line-height:1.7;background:rgba(7,9,18,.6);border:1px solid var(--border);border-radius:8px;padding:14px;min-height:200px;max-height:280px;overflow-y:auto"></div>
+    <div class="game-controls">
+      <button class="demo-btn" id="ag-next">▸ Next step</button>
+      <button class="demo-btn alt" id="ag-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout"><span><b>step</b><span id="ag-step">0</span></span><span><b>cost</b><span id="ag-cost" class="ok">$0.0000</span></span></div>`;
+  const trace = [
+    {t:'user',c:'Find the latest paper on RoPE and summarize it.'},
+    {t:'think',c:'Search web for recent RoPE papers, read most-cited.'},
+    {t:'tool',c:'web_search("RoPE positional encoding 2024")'},
+    {t:'obs',c:'3 results: RoFormer (2021), YaRN (2023), LongRoPE (2024)'},
+    {t:'think',c:'LongRoPE is most recent. Read it.'},
+    {t:'tool',c:'fetch_url("arxiv.org/abs/2402.13753")'},
+    {t:'obs',c:'Abstract: "LongRoPE extends context to 2M tokens..."'},
+    {t:'think',c:'Got enough. Synthesize.'},
+    {t:'final',c:'LongRoPE (2024) extends context to 2M tokens via non-uniform RoPE rescaling + short fine-tune.'},
+  ];
+  let step = 0; let total = 0;
+  const cost = [0,.003,.005,0,.003,.005,0,.003,.004];
+  function render(){
+    const log = host.querySelector('#ag-log');
+    const colorOf = {user:'#7ad4ff',think:'#9d7aff',tool:'#ffd166',obs:'#3ecf8e',final:'#7aa2ff'};
+    const labelOf = {user:'USER',think:'THINK',tool:'TOOL',obs:'OBS',final:'ANSWER'};
+    log.innerHTML = trace.slice(0,step).map(x=>`<div><span style="color:${colorOf[x.t]};font-weight:700">${labelOf[x.t]}</span> <span style="color:var(--ink)">${escapeHtml(x.c)}</span></div>`).join('');
+    log.scrollTop = log.scrollHeight;
+    host.querySelector('#ag-step').textContent = step;
+    host.querySelector('#ag-cost').textContent = '$'+total.toFixed(4);
+  }
+  host.querySelector('#ag-next').addEventListener('click',()=>{if (step < trace.length){total += cost[step]; step++; render();}},{signal});
+  host.querySelector('#ag-reset').addEventListener('click',()=>{step=0;total=0;render();},{signal});
+  render();
+}
+
+function gameCost(host, signal){
+  host.innerHTML = `
+    <div class="hint">💰 <b>Simulate scale.</b> Find break-even on cache.</div>
+    <div class="game-controls">
+      <div class="demo-slider"><label>req/s</label><input type="range" id="co-rps" min="0.1" max="100" step="0.1" value="5"><span class="val" id="co-rpsv">5</span></div>
+      <div class="demo-slider"><label>tokens/req</label><input type="range" id="co-tok" min="100" max="20000" step="100" value="2000"><span class="val" id="co-tokv">2000</span></div>
+      <div class="demo-slider"><label>cache hit %</label><input type="range" id="co-cache" min="0" max="100" step="5" value="60"><span class="val" id="co-cachev">60</span></div>
+    </div>
+    <div class="game-readout">
+      <span><b>$/day</b><span id="co-d">—</span></span>
+      <span><b>$/month</b><span id="co-m" class="err">—</span></span>
+      <span><b>cost saved</b><span id="co-saved" class="ok">—</span></span>
+      <span><b>p99 latency</b><span id="co-p99">—</span></span>
+    </div>`;
+  function compute(){
+    const rps = +host.querySelector('#co-rps').value;
+    const tok = +host.querySelector('#co-tok').value;
+    const cache = +host.querySelector('#co-cache').value/100;
+    const inputCost = tok * (3*(1-cache) + 0.3*cache) / 1e6;
+    const outputCost = 400 * 15 / 1e6;
+    const perReq = inputCost + outputCost;
+    const perDay = perReq * rps * 86400;
+    const perMonth = perDay * 30;
+    const uncached = tok*3/1e6 * rps*86400*30 + 400*15/1e6 * rps*86400*30;
+    const saved = uncached - perMonth;
+    const p99 = 800 + tok*0.05 + (1-cache)*200 + Math.max(0, rps-20)*30;
+    host.querySelector('#co-d').textContent = '$'+perDay.toFixed(2);
+    host.querySelector('#co-m').textContent = '$'+perMonth.toFixed(0);
+    host.querySelector('#co-saved').textContent = '$'+saved.toFixed(0);
+    host.querySelector('#co-p99').textContent = Math.round(p99)+'ms';
+    host.querySelector('#co-rpsv').textContent = rps.toFixed(1);
+    host.querySelector('#co-tokv').textContent = tok;
+    host.querySelector('#co-cachev').textContent = (cache*100).toFixed(0);
+  }
+  ['co-rps','co-tok','co-cache'].forEach(id => host.querySelector('#'+id).addEventListener('input',compute,{signal}));
+  compute();
 }
 function gameDotProduct(host, signal){
   host.innerHTML = `
