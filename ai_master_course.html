@@ -146,6 +146,103 @@ pre .fn{color:#7aa2ff}
   .step-card{padding:18px 16px 16px 56px}
   .step-card > .step-num{left:12px;width:30px;height:30px;font-size:13px;top:18px}
 }
+/* Phase game (interactive widget per phase) */
+.phase-game{
+  background:linear-gradient(135deg,rgba(122,162,255,.06),rgba(157,122,255,.04));
+  border:1px solid rgba(122,162,255,.25);
+  border-radius:var(--rad);
+  padding:18px 22px;margin:18px 0;
+  position:relative;overflow:hidden;
+}
+.phase-game::before{
+  content:"";position:absolute;top:-30px;right:-30px;
+  width:120px;height:120px;border-radius:50%;
+  background:radial-gradient(circle,rgba(122,162,255,.25),transparent 70%);
+  filter:blur(20px);pointer-events:none;
+}
+.phase-game h3{
+  margin:0 0 4px;font-size:17px;font-weight:700;
+  color:var(--accent2);background:none;-webkit-text-fill-color:initial;
+  background-clip:initial;-webkit-background-clip:initial;
+  display:flex;align-items:center;gap:8px;
+  position:relative;z-index:1;
+}
+.phase-game .why{
+  font-size:13.5px;color:var(--muted);margin-bottom:14px;line-height:1.55;
+  position:relative;z-index:1;
+}
+.phase-game .why b{color:var(--accent)}
+.game-stage{
+  background:linear-gradient(180deg,rgba(7,9,18,.55),rgba(7,9,18,.75));
+  border:1px solid var(--border);border-radius:10px;
+  padding:14px;position:relative;z-index:1;
+}
+.game-stage canvas{
+  width:100%;display:block;border-radius:6px;
+  background:rgba(7,9,18,.4);
+}
+.game-stage .hint{
+  font-size:13px;color:var(--muted);margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.game-stage .hint b{color:var(--accent)}
+.game-controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.game-controls .demo-slider,
+.game-stage .demo-slider{
+  display:inline-flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  padding:6px 12px;border-radius:8px;font-size:12.5px;color:var(--muted);
+}
+.game-controls input[type=range],
+.game-stage input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:110px;height:4px;
+  background:rgba(255,255,255,.1);border-radius:99px;outline:none;
+}
+.game-controls input[type=range]::-webkit-slider-thumb,
+.game-stage input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px rgba(122,162,255,.2);
+}
+.game-controls .val,
+.game-stage .val{font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:600;min-width:36px;text-align:right}
+.game-controls .demo-btn,
+.game-stage .demo-btn{
+  padding:7px 14px;border-radius:7px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+  border:none;font-weight:600;font-size:13px;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.game-controls .demo-btn:hover,
+.game-stage .demo-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(122,162,255,.4)}
+.game-controls .demo-btn.alt,
+.game-stage .demo-btn.alt{
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+}
+.game-readout{
+  display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;
+  font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);
+}
+.game-readout b{color:var(--accent);font-weight:700;margin-right:4px}
+.game-readout .ok{color:var(--ok)}
+.game-readout .err{color:var(--err)}
+#bpe-tokens .tok{
+  display:inline-block;padding:5px 9px;border-radius:5px;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+  color:#0a0e16;line-height:1.2;
+  animation:tok-pop .25s cubic-bezier(.16,1,.3,1);
+}
+@keyframes tok-pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
+/* Scroll reveal animation for cards */
+.step-card,.card,.quiz,.phase-game{
+  opacity:1;transition:opacity .6s ease-out, transform .6s cubic-bezier(.16,1,.3,1);
+}
+.reveal-in{opacity:0;transform:translateY(18px)}
+.reveal-in.in{opacity:1;transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){
+  .reveal-in,.reveal-in.in{opacity:1;transform:none;transition:none}
+  .phase-game::before{animation:none}
+}
 .card{background:linear-gradient(180deg,var(--panel) 0%,rgba(20,26,42,.6) 100%);border:1px solid var(--border-soft);border-radius:var(--rad);padding:18px;margin:14px 0;box-shadow:var(--shadow-sm);transition:all var(--t-base)}
 .card:hover{border-color:var(--border)}
 .tag{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(28,36,56,.6);color:var(--muted);font-size:11px;margin-right:6px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border-soft)}
@@ -3770,7 +3867,10 @@ function renderSidebar(){
   }
 }
 
+let _pendingPhaseMount = null;
 function renderMain(){
+  if (_pendingPhaseMount){ clearTimeout(_pendingPhaseMount); _pendingPhaseMount = null; }
+  if (typeof teardownPhaseGame === 'function') teardownPhaseGame();
   if(currentView==="phases") renderPhase();
   else if(currentView==="games") renderGames();
   else if(currentView==="review") renderReview();
@@ -3863,6 +3963,12 @@ function renderPhase(){
       </div>
       <p class="intro-text">${p.intro}</p>
     </section>
+    ${PHASE_GAMES[p.id] ? `
+    <div class="phase-game">
+      <h3>🎮 ${PHASE_GAMES[p.id].title}</h3>
+      <div class="why">${PHASE_GAMES[p.id].why}</div>
+      <div class="game-stage" id="phase-game-stage"></div>
+    </div>` : ''}
     ${toc}${lessons}
     <h3>Checkpoint Quiz</h3>
     <div class="card score-summary">Score: ${correct}/${total} (${pct}%) — pass at 70%+ to mark complete (+200 XP)</div>
@@ -3875,7 +3981,11 @@ function renderPhase(){
       <button onclick="goPhase(${Math.min(COURSE.length-1,currentPhase+1)})" ${currentPhase===COURSE.length-1?'disabled':''}>Next →</button>
     </div>`;
   window.scrollTo({top:0,behavior:"smooth"});
-  setTimeout(()=>{
+  const renderedPhaseId = p.id;
+  _pendingPhaseMount = setTimeout(()=>{
+    _pendingPhaseMount = null;
+    // guard against fast phase switches: bail if the visible phase changed mid-flight
+    if (currentView !== "phases" || COURSE[currentPhase].id !== renderedPhaseId) return;
     try{ paramCalc(); }catch(e){}
     // mount inline visualizers into placeholders
     document.querySelectorAll('[data-widget]').forEach(el=>{
@@ -3886,6 +3996,10 @@ function renderPhase(){
       else if(w === "lr-viz"){ el.innerHTML = lrVizHtml(); setTimeout(lrViz, 10); }
       el.removeAttribute("data-widget"); // prevent re-mounting
     });
+    // mount per-phase game (ported from new UI)
+    if (typeof mountPhaseGame === 'function') mountPhaseGame(renderedPhaseId);
+    // scroll-reveal animation
+    if (typeof setupReveal === 'function') setupReveal();
   }, 50);
 }
 
@@ -5083,6 +5197,384 @@ async function timerFinish(){
 
 /* --------------------- BOOT --------------------- */
 function render(){ renderSidebar(); renderMain(); refreshHeader(); paintStreakBanner(); }
+
+/* ============ Per-phase interactive games (ported from new UI) ============ */
+const PHASE_GAMES = {
+  1: {type:"dotproduct", title:"Dot Product Playground", why:"Drag the arrowheads. Watch the <b>dot product</b>, angle and alignment update live. Parallel = max, perpendicular = 0, anti-parallel = min."},
+  3: {type:"overfit",    title:"Overfitting Slider",      why:"Drag <b>polynomial degree</b> on noisy sine data. Watch train + test loss diverge. This is exactly why we regularize."},
+  5: {type:"bpestep",    title:"BPE Step-by-Step",        why:"Click <b>merge most-common pair</b> to greedily build vocabulary. The same algorithm GPT and Claude use, just slower."},
+  7: {type:"losscurve",  title:"Training Loss Sandbox",   why:"Tune <b>learning rate</b> + <b>batch size</b> on a simulated training run. Too high explodes. Too low stalls. Find the sweet spot."},
+  10:{type:"retrieve",   title:"k-NN Retrieval Visualizer", why:"Click anywhere to drop a <b>query</b>. The k nearest 'documents' light up. This is what every RAG system does in higher dims."},
+};
+let _phaseGameCtrl = null;
+function teardownPhaseGame(){ if (_phaseGameCtrl){_phaseGameCtrl.abort(); _phaseGameCtrl = null;} }
+function mountPhaseGame(phaseId){
+  teardownPhaseGame();
+  const cfg = PHASE_GAMES[phaseId];
+  const host = document.getElementById('phase-game-stage');
+  if (!cfg || !host) return;
+  const dispatch = {dotproduct:gameDotProduct, overfit:gameOverfit, bpestep:gameBPEStep, losscurve:gameLossCurve, retrieve:gameRetrieve};
+  const fn = dispatch[cfg.type];
+  if (!fn) return;
+  const ctrl = new AbortController();
+  _phaseGameCtrl = ctrl;
+  fn(host, ctrl.signal);
+}
+function gameDotProduct(host, signal){
+  host.innerHTML = `
+    <div class="hint">🖱 <b>Drag the arrowheads.</b> Live: dot product · angle · cos θ · alignment.</div>
+    <canvas height="260"></canvas>
+    <div class="game-readout">
+      <span><b>a</b><span id="dp-a">—</span></span>
+      <span><b>b</b><span id="dp-b">—</span></span>
+      <span><b>a·b</b><span id="dp-dot">—</span></span>
+      <span><b>angle</b><span id="dp-ang">—</span>°</span>
+      <span><b>cos θ</b><span id="dp-cos">—</span></span>
+      <span id="dp-msg"></span>
+    </div>`;
+  const c = host.querySelector('canvas'); const ctx = c.getContext('2d');
+  let W,H,cx,cy,scale,dpr; let a={x:2,y:1.5}, b={x:-1.2,y:1.7}; let drag=null;
+  function resize(){
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=c.clientWidth; H=c.clientHeight;
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    cx=W/2; cy=H/2; scale=Math.min(W,H)/8; draw();
+  }
+  function w2c(v){return [cx+v.x*scale, cy-v.y*scale]}
+  function c2w(px,py){return {x:(px-cx)/scale, y:-(py-cy)/scale}}
+  function arrow(v,col){
+    const [ex,ey]=w2c(v);
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex,ey);ctx.stroke();
+    const ang=Math.atan2(ey-cy,ex-cx);
+    ctx.beginPath();ctx.moveTo(ex,ey);
+    ctx.lineTo(ex-12*Math.cos(ang-.4), ey-12*Math.sin(ang-.4));
+    ctx.lineTo(ex-12*Math.cos(ang+.4), ey-12*Math.sin(ang+.4));
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=2; ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.stroke();
+  }
+  function draw(){
+    if (!W) return;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(238,242,250,.06)'; ctx.lineWidth=1;
+    for (let i=-4;i<=4;i++){
+      ctx.beginPath();ctx.moveTo(cx+i*scale,0);ctx.lineTo(cx+i*scale,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,cy+i*scale);ctx.lineTo(W,cy+i*scale);ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(238,242,250,.18)';
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+    const angA=Math.atan2(a.y,a.x), angB=Math.atan2(b.y,b.x);
+    ctx.strokeStyle='rgba(255,209,102,.5)'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(cx,cy,36,-angA,-angB,angA<angB); ctx.stroke();
+    arrow(a,'#7aa2ff'); arrow(b,'#ff7ad4');
+    const [ax,ay]=w2c(a), [bx,by]=w2c(b);
+    ctx.fillStyle='#7aa2ff'; ctx.font='600 14px Inter'; ctx.fillText('a',ax+10,ay-8);
+    ctx.fillStyle='#ff7ad4'; ctx.fillText('b',bx+10,by-8);
+    const dot=a.x*b.x+a.y*b.y;
+    const mA=Math.hypot(a.x,a.y), mB=Math.hypot(b.x,b.y);
+    const cos=dot/(mA*mB||1);
+    const ang=Math.acos(Math.max(-1,Math.min(1,cos)))*180/Math.PI;
+    host.querySelector('#dp-a').textContent=`(${a.x.toFixed(1)}, ${a.y.toFixed(1)})`;
+    host.querySelector('#dp-b').textContent=`(${b.x.toFixed(1)}, ${b.y.toFixed(1)})`;
+    host.querySelector('#dp-dot').textContent=dot.toFixed(2);
+    host.querySelector('#dp-ang').textContent=ang.toFixed(0);
+    host.querySelector('#dp-cos').textContent=cos.toFixed(2);
+    const msg=host.querySelector('#dp-msg');
+    if (ang<15) msg.innerHTML='<span class="ok">≈ parallel</span>';
+    else if (ang>165) msg.innerHTML='<span class="err">≈ anti-parallel</span>';
+    else if (Math.abs(ang-90)<8) msg.innerHTML='<span style="color:var(--accent3)">≈ perpendicular</span>';
+    else msg.textContent='';
+  }
+  function hit(px,py,v){const [ex,ey]=w2c(v); return Math.hypot(px-ex,py-ey)<14}
+  function onDown(e){
+    const r=c.getBoundingClientRect();
+    const px=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const py=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    if (hit(px,py,a)) drag='a'; else if (hit(px,py,b)) drag='b';
+  }
+  function onMove(e){
+    if (!drag) return;
+    e.preventDefault();
+    const r=c.getBoundingClientRect();
+    const px=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const py=(e.touches?e.touches[0].clientY:e.clientY)-r.top;
+    const w=c2w(px,py);
+    if (drag==='a') a=w; else b=w;
+    draw();
+  }
+  function onUp(){drag=null}
+  c.addEventListener('mousedown',onDown,{signal});
+  window.addEventListener('mousemove',onMove,{signal});
+  window.addEventListener('mouseup',onUp,{signal});
+  c.addEventListener('touchstart',onDown,{passive:true,signal});
+  window.addEventListener('touchmove',onMove,{passive:false,signal});
+  window.addEventListener('touchend',onUp,{signal});
+  window.addEventListener('resize',resize,{signal});
+  resize();
+}
+function gameOverfit(host, signal){
+  host.innerHTML = `
+    <div class="hint">🎚 <b>Drag the polynomial degree.</b> See train + test loss diverge as the model memorizes noise.</div>
+    <canvas height="260"></canvas>
+    <div class="game-controls">
+      <div class="demo-slider"><label>Degree</label><input type="range" id="of-deg" min="1" max="14" step="1" value="3"><span class="val" id="of-degv">3</span></div>
+      <button class="demo-btn alt" id="of-resample">🎲 Resample</button>
+    </div>
+    <div class="game-readout">
+      <span><b>train</b><span id="of-train">—</span></span>
+      <span><b>test</b><span id="of-test">—</span></span>
+      <span id="of-msg"></span>
+    </div>`;
+  const c=host.querySelector('canvas'); const ctx=c.getContext('2d');
+  let train=[], test=[]; let W,H;
+  function sample(){
+    train=[]; test=[];
+    for (let i=0;i<18;i++){const x=(Math.random()*2-1)*1.6; train.push({x,y:Math.sin(x*1.5)+(Math.random()-.5)*.35});}
+    for (let i=0;i<40;i++){const x=-1.6+i*3.2/39; test.push({x,y:Math.sin(x*1.5)+(Math.random()-.5)*.35});}
+  }
+  function fit(deg){
+    const n=train.length, m=deg+1;
+    const A=Array.from({length:m},()=>new Array(m).fill(0));
+    const bv=new Array(m).fill(0);
+    for (const p of train){
+      for (let r=0;r<m;r++){
+        bv[r]+=Math.pow(p.x,r)*p.y;
+        for (let cc=0;cc<m;cc++) A[r][cc]+=Math.pow(p.x,r)*Math.pow(p.x,cc);
+      }
+    }
+    for (let r=0;r<m;r++) A[r][r]+=1e-6;
+    for (let r=0;r<m;r++){
+      let piv=r;
+      for (let k=r+1;k<m;k++) if (Math.abs(A[k][r])>Math.abs(A[piv][r])) piv=k;
+      [A[r],A[piv]]=[A[piv],A[r]]; [bv[r],bv[piv]]=[bv[piv],bv[r]];
+      const d=A[r][r]||1e-9;
+      for (let cc=r;cc<m;cc++) A[r][cc]/=d; bv[r]/=d;
+      for (let k=0;k<m;k++) if (k!==r){const f=A[k][r]; for (let cc=r;cc<m;cc++) A[k][cc]-=f*A[r][cc]; bv[k]-=f*bv[r];}
+    }
+    return bv;
+  }
+  function predict(w,x){let s=0;for (let k=0;k<w.length;k++) s+=w[k]*Math.pow(x,k);return s;}
+  function w2c(x,y){return [50+(x+2)/4*(W-70), H-30-(y+1.6)/3.2*(H-50)]}
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(238,242,250,.08)';
+    for (let i=0;i<6;i++){const y=30+(H-60)*i/5; ctx.beginPath();ctx.moveTo(50,y);ctx.lineTo(W-20,y);ctx.stroke();}
+    const deg=+host.querySelector('#of-deg').value;
+    const w=fit(deg);
+    ctx.strokeStyle='#9d7aff'; ctx.lineWidth=2.5; ctx.beginPath();
+    for (let px=0;px<=200;px++){const x=-2+px/200*4; const y=predict(w,x); const [cx_,cy_]=w2c(x,Math.max(-1.6,Math.min(1.6,y))); if (px===0) ctx.moveTo(cx_,cy_); else ctx.lineTo(cx_,cy_);}
+    ctx.stroke();
+    ctx.strokeStyle='rgba(255,209,102,.4)'; ctx.lineWidth=1.5; ctx.setLineDash([5,5]); ctx.beginPath();
+    for (let px=0;px<=200;px++){const x=-2+px/200*4; const y=Math.sin(x*1.5); const [cx_,cy_]=w2c(x,y); if (px===0) ctx.moveTo(cx_,cy_); else ctx.lineTo(cx_,cy_);}
+    ctx.stroke(); ctx.setLineDash([]);
+    train.forEach(p=>{const [px,py]=w2c(p.x,p.y); ctx.fillStyle='#7aa2ff'; ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fill();});
+    const tr=train.reduce((s,p)=>s+(predict(w,p.x)-p.y)**2,0)/train.length;
+    const te=test.reduce((s,p)=>s+(predict(w,p.x)-p.y)**2,0)/test.length;
+    host.querySelector('#of-train').textContent=tr.toFixed(3);
+    host.querySelector('#of-test').textContent=te.toFixed(3);
+    const msg=host.querySelector('#of-msg');
+    if (deg<=2) msg.innerHTML='<span class="err">underfitting</span>';
+    else if (te>tr*4) msg.innerHTML='<span class="err">overfitting</span>';
+    else msg.innerHTML='<span class="ok">decent fit</span>';
+    host.querySelector('#of-degv').textContent=deg;
+  }
+  sample(); draw();
+  host.querySelector('#of-deg').addEventListener('input',draw,{signal});
+  host.querySelector('#of-resample').addEventListener('click',()=>{sample();draw();},{signal});
+  window.addEventListener('resize',draw,{signal});
+}
+function gameBPEStep(host, signal){
+  host.innerHTML = `
+    <div class="hint">📜 <b>Click "merge"</b> to walk the BPE algorithm one greedy step at a time.</div>
+    <div id="bpe-tokens" style="display:flex;flex-wrap:wrap;gap:5px;padding:12px;background:rgba(7,9,18,.4);border-radius:8px;min-height:80px;align-items:center"></div>
+    <div class="game-controls">
+      <button class="demo-btn" id="bpe-step">⚙ Merge most-common pair</button>
+      <button class="demo-btn alt" id="bpe-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout">
+      <span><b>step</b><span id="bpe-step-n">0</span></span>
+      <span><b>tokens</b><span id="bpe-len">—</span></span>
+      <span><b>vocab</b><span id="bpe-vocab">—</span></span>
+      <span id="bpe-msg" style="color:var(--gold)"></span>
+    </div>`;
+  const seed="the cat sat on the mat the dog sat on the bed";
+  let tokens=[], vocab=new Set(), stepN=0;
+  const colorFor=t=>{let h=0;for(let i=0;i<t.length;i++) h=((h<<5)-h+t.charCodeAt(i))|0; return `hsl(${Math.abs(h)%360} 65% 60%)`;};
+  function render(){
+    const el=host.querySelector('#bpe-tokens');
+    el.innerHTML=tokens.map(t=>`<span class="tok" style="background:${colorFor(t)};color:#0a0e16">${escapeHtml(t.replace(/ /g,'·'))}</span>`).join('');
+    host.querySelector('#bpe-step-n').textContent=stepN;
+    host.querySelector('#bpe-len').textContent=tokens.length;
+    host.querySelector('#bpe-vocab').textContent=vocab.size;
+  }
+  function reset(){tokens=Array.from(seed); vocab=new Set(tokens); stepN=0; host.querySelector('#bpe-msg').textContent=''; render();}
+  function step(){
+    const counts=new Map();
+    for (let i=0;i<tokens.length-1;i++){const k=tokens[i]+'|'+tokens[i+1]; counts.set(k,(counts.get(k)||0)+1);}
+    let bK=null, bV=0;
+    for (const [k,v] of counts) if (v>bV){bV=v; bK=k;}
+    if (!bK || bV<2){host.querySelector('#bpe-msg').textContent='✓ no pair appears twice — done!'; return;}
+    const [a,b]=bK.split('|'); const m=a+b;
+    const out=[]; let i=0;
+    while (i<tokens.length){
+      if (i<tokens.length-1 && tokens[i]===a && tokens[i+1]===b){out.push(m); i+=2;}
+      else {out.push(tokens[i]); i++;}
+    }
+    tokens=out; vocab.add(m); stepN++;
+    host.querySelector('#bpe-msg').innerHTML=`merged <code>"${escapeHtml(a)}"+"${escapeHtml(b)}"</code> → <code>"${escapeHtml(m)}"</code> (×${bV})`;
+    render();
+  }
+  host.querySelector('#bpe-step').addEventListener('click',step,{signal});
+  host.querySelector('#bpe-reset').addEventListener('click',reset,{signal});
+  reset();
+}
+function gameLossCurve(host, signal){
+  host.innerHTML = `
+    <div class="hint">📉 <b>Tune LR + batch.</b> Too high explodes. Too low stalls. Find the sweet spot.</div>
+    <canvas height="220"></canvas>
+    <div class="game-controls">
+      <div class="demo-slider"><label>LR</label><input type="range" id="lc-lr" min="-4" max="-1" step="0.1" value="-2.5"><span class="val" id="lc-lrv">3e-3</span></div>
+      <div class="demo-slider"><label>Batch</label><input type="range" id="lc-batch" min="2" max="256" step="2" value="32"><span class="val" id="lc-batchv">32</span></div>
+      <button class="demo-btn" id="lc-train">▶ Train</button>
+      <button class="demo-btn alt" id="lc-reset">↻ Reset</button>
+    </div>
+    <div class="game-readout">
+      <span><b>step</b><span id="lc-step">0</span></span>
+      <span><b>loss</b><span id="lc-loss">—</span></span>
+      <span id="lc-msg"></span>
+    </div>`;
+  const c=host.querySelector('canvas'); const ctx=c.getContext('2d');
+  let history=[], W, H, training=false, step=0;
+  function lr(){return Math.pow(10,+host.querySelector('#lc-lr').value)}
+  function batch(){return +host.querySelector('#lc-batch').value}
+  function noise(){return .6/Math.sqrt(batch())}
+  function simulate(){
+    const l=lr();
+    if (history.length===0) history.push(4.5);
+    let last=history[history.length-1];
+    let next;
+    if (l>.05) next=last+l*l*30*(Math.random()-.2);
+    else {const decay=Math.exp(-l*60); next=(last-.4)*decay+.4+(Math.random()-.5)*noise();}
+    next=Math.max(0,Math.min(8,next));
+    history.push(next); if (history.length>200) history.shift();
+    step++; draw();
+  }
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle='rgba(238,242,250,.08)';
+    for (let i=0;i<6;i++){const y=20+(H-40)*i/5; ctx.beginPath();ctx.moveTo(40,y);ctx.lineTo(W-12,y);ctx.stroke(); ctx.fillStyle='rgba(163,176,199,.5)'; ctx.font='10px JetBrains Mono'; ctx.fillText((4-4*i/5).toFixed(1),8,y+3);}
+    if (history.length>1){
+      ctx.strokeStyle='#7aa2ff'; ctx.lineWidth=2; ctx.beginPath();
+      history.forEach((v,i)=>{const x=40+i/Math.max(1,history.length-1)*(W-52); const y=20+(1-v/8)*(H-40); if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);});
+      ctx.stroke();
+      const lv=history[history.length-1];
+      ctx.fillStyle='#ffd166'; ctx.beginPath();ctx.arc(W-12,20+(1-lv/8)*(H-40),5,0,Math.PI*2);ctx.fill();
+    }
+    host.querySelector('#lc-step').textContent=step;
+    const lv=history[history.length-1]||0;
+    host.querySelector('#lc-loss').textContent=lv.toFixed(3);
+    const l=lr(); const msg=host.querySelector('#lc-msg');
+    if (l>.05) msg.innerHTML='<span class="err">🔥 exploding</span>';
+    else if (l<1e-3) msg.innerHTML='<span class="err">🐌 too slow</span>';
+    else if (lv<.6) msg.innerHTML='<span class="ok">✓ converged</span>';
+    else msg.textContent='';
+  }
+  function loop(){if (!training||signal.aborted){training=false;return} simulate(); if (step<200) requestAnimationFrame(loop); else training=false;}
+  signal.addEventListener('abort',()=>{training=false;});
+  host.querySelector('#lc-train').addEventListener('click',()=>{if (training){training=false;return} training=true; loop();},{signal});
+  host.querySelector('#lc-reset').addEventListener('click',()=>{history=[];step=0;training=false;draw();},{signal});
+  host.querySelector('#lc-lr').addEventListener('input',e=>{host.querySelector('#lc-lrv').textContent=Math.pow(10,+e.target.value).toExponential(1);},{signal});
+  host.querySelector('#lc-batch').addEventListener('input',e=>{host.querySelector('#lc-batchv').textContent=e.target.value;},{signal});
+  window.addEventListener('resize',draw,{signal});
+  host.querySelector('#lc-lrv').textContent=lr().toExponential(1);
+  draw();
+}
+function gameRetrieve(host, signal){
+  host.innerHTML = `
+    <div class="hint">🎯 <b>Click anywhere</b> to drop a query. The k nearest documents light up.</div>
+    <canvas height="260" style="cursor:crosshair"></canvas>
+    <div class="game-controls">
+      <div class="demo-slider"><label>k</label><input type="range" id="rt-k" min="1" max="8" step="1" value="3"><span class="val" id="rt-kv">3</span></div>
+      <button class="demo-btn alt" id="rt-resample">🎲 New docs</button>
+    </div>
+    <div class="game-readout">
+      <span><b>top-k</b><span id="rt-dists">click to search</span></span>
+    </div>`;
+  const c=host.querySelector('canvas'); const ctx=c.getContext('2d');
+  let docs=[], query=null, W, H;
+  const topics=['transformers','rag','agents','math','tokens','ops','llm','train','eval','prompts'];
+  function sample(){
+    docs=[];
+    for (let cl=0;cl<4;cl++){
+      const cx=.15+Math.random()*.7, cy=.15+Math.random()*.7;
+      for (let i=0;i<8;i++) docs.push({x:cx+(Math.random()-.5)*.18, y:cy+(Math.random()-.5)*.18, t:topics[(cl*topics.length/4+i%3)|0]||topics[i%topics.length]});
+    }
+    draw();
+  }
+  function w2c(p){return [40+p.x*(W-60), 20+p.y*(H-40)]}
+  function draw(){
+    W=c.clientWidth; H=c.clientHeight;
+    const dpr=Math.min(devicePixelRatio||1,2);
+    c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='rgba(122,162,255,.03)'; ctx.fillRect(0,0,W,H);
+    let topk=[];
+    if (query){
+      topk=docs.map((d,i)=>({i,dist:Math.hypot(d.x-query.x,d.y-query.y)})).sort((a,b)=>a.dist-b.dist).slice(0,+host.querySelector('#rt-k').value);
+      ctx.strokeStyle='rgba(255,209,102,.55)'; ctx.lineWidth=1.5;
+      const [qx,qy]=w2c(query);
+      topk.forEach(({i})=>{const [dx,dy]=w2c(docs[i]); ctx.beginPath();ctx.moveTo(qx,qy);ctx.lineTo(dx,dy);ctx.stroke();});
+    }
+    docs.forEach((d,i)=>{
+      const [px,py]=w2c(d);
+      const isTop=topk.some(t=>t.i===i);
+      ctx.fillStyle=isTop?'#ffd166':'#7aa2ff'; ctx.globalAlpha=isTop?1:.65;
+      ctx.beginPath();ctx.arc(px,py,isTop?10:7,0,Math.PI*2);ctx.fill(); ctx.globalAlpha=1;
+      if (isTop){
+        ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath();ctx.arc(px,py,10,0,Math.PI*2);ctx.stroke();
+        ctx.fillStyle='#ffd166'; ctx.font='600 10px JetBrains Mono'; ctx.fillText(d.t,px+13,py+4);
+      }
+    });
+    if (query){
+      const [qx,qy]=w2c(query);
+      ctx.fillStyle='#ff7ad4'; ctx.beginPath();ctx.arc(qx,qy,9,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath();ctx.arc(qx,qy,9,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#ff7ad4'; ctx.font='700 11px Inter'; ctx.fillText('query',qx+13,qy-7);
+    }
+    const el=host.querySelector('#rt-dists');
+    if (topk.length) el.innerHTML=topk.map(t=>`<span style="color:var(--gold)">${docs[t.i].t}</span> <span style="color:var(--dim)">${t.dist.toFixed(2)}</span>`).join(' · ');
+  }
+  c.addEventListener('click',e=>{
+    const r=c.getBoundingClientRect();
+    const px=e.clientX-r.left, py=e.clientY-r.top;
+    query={x:Math.max(0,Math.min(1,(px-40)/(W-60))), y:Math.max(0,Math.min(1,(py-20)/(H-40)))};
+    draw();
+  },{signal});
+  host.querySelector('#rt-k').addEventListener('input',e=>{host.querySelector('#rt-kv').textContent=e.target.value; draw();},{signal});
+  host.querySelector('#rt-resample').addEventListener('click',sample,{signal});
+  window.addEventListener('resize',draw,{signal});
+  sample();
+}
+
+/* Scroll-reveal observer for cards rendered into #main */
+let _revealIO = null;
+function setupReveal(){
+  if (_revealIO) _revealIO.disconnect();
+  _revealIO = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if (e.isIntersecting){ e.target.classList.add('in'); _revealIO.unobserve(e.target);} });
+  }, {threshold:.1, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('#main .step-card, #main .card, #main .quiz, #main .phase-game').forEach(el=>{
+    el.classList.add('reveal-in'); _revealIO.observe(el);
+  });
+}
 updateStreak();
 refreshBadges();
 render();
