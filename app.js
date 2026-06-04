@@ -2738,7 +2738,7 @@ if (conceptSearch) conceptSearch.addEventListener('input', e => renderConcepts(e
   const host = document.getElementById('agent-steps');
   if (!host || typeof AGENT_STEPS === 'undefined') return;
   host.innerHTML = AGENT_STEPS.map((s, i) => `
-    <div class="agent-step">
+    <div class="agent-step reveal">
       <div class="agent-step-num">${(s.title.match(/Step (\d+)/) || [,'🤖'])[1]}</div>
       <div class="agent-step-main">
         <h3>${escapeHtml(s.title)}</h3>
@@ -2762,6 +2762,11 @@ if (conceptSearch) conceptSearch.addEventListener('input', e => renderConcepts(e
       });
     });
   });
+  // These steps render after the global reveal observer was wired, so observe
+  // them here (fallback: show immediately) — otherwise they'd stay opacity:0.
+  const steps = host.querySelectorAll('.agent-step');
+  if (window.io) steps.forEach(el => window.io.observe(el));
+  else steps.forEach(el => el.classList.add('in'));
 })();
 
 /* ================== SAVED PROGRESS DETECTION ================== */
