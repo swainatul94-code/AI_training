@@ -959,6 +959,34 @@ const AGENT_STEPS = [
    code:`• MCP (Model Context Protocol) — instead of hand-wiring tools, expose\n  them as an MCP server once; any MCP client (Claude Desktop, your app,\n  the Agent SDK) can use them. The ecosystem standard for tools.\n\n• Claude Agent SDK — Anthropic's official harness. Gives you the loop,\n  subagents, file/bash tools, memory, and hooks out of the box, so you\n  write capabilities instead of plumbing.\n\n• Observability + evals — add Langfuse/Helicone to trace every step,\n  and build a golden set of tasks to measure success rate, cost, and\n  latency. Reliability — not cleverness — is what ships agents.\n\nGolden rule: never give an agent a tool whose worst-case misuse you\ncan't tolerate. Sandbox anything that touches files, shells, or money.`},
 ];
 
+/* Transactional restore of aizh_* keys into `store`. Snapshots first; on ANY
+   setItem failure, rolls every key back to its prior value (or removes keys that
+   didn't exist), so a quota error mid-import never leaves mixed/partial state.
+   Returns {ok:boolean, error?}. Pure + injectable for testing. */
+function transactionalRestore(entries, store) {
+  const snapshot = {};
+  const hadKey = {};
+  try {
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i);
+      if (k && k.startsWith('aizh_')) { snapshot[k] = store.getItem(k); hadKey[k] = true; }
+    }
+  } catch {}
+  try {
+    entries.forEach(([k, v]) => store.setItem(k, v));
+    return { ok: true };
+  } catch (error) {
+    try {
+      entries.forEach(([k]) => {
+        if (hadKey[k]) store.setItem(k, snapshot[k]);
+        else store.removeItem(k);
+      });
+    } catch {}
+    return { ok: false, error };
+  }
+}
+if (typeof window !== 'undefined') window.transactionalRestore = transactionalRestore;
+
 /* ================== PROGRESS STORAGE ================== */
 const PROG_KEY = 'aizh_progress_v1';
 function loadProg(){
@@ -3756,6 +3784,65 @@ window.logActivity = logActivity;
   }
   window.renderHeatmap = render;
   render();
+})();
+
+/* ================== PROGRESS EXPORT / IMPORT ================== */
+(function(){
+  const exportBtn = document.getElementById('prog-export');
+  const importBtn = document.getElementById('prog-import-btn');
+  const fileInput = document.getElementById('prog-import');
+  const msg = document.getElementById('prog-msg');
+  if (!exportBtn || !fileInput) return;
+  function allProgress(){
+    const out = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('aizh_')) out[k] = localStorage.getItem(k);
+      }
+    } catch {}
+    return out;
+  }
+  exportBtn.addEventListener('click', () => {
+    const data = { _app: 'ai-zero-to-hero', _version: 1, _exported: new Date().toISOString(), keys: allProgress() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ai-zero-to-hero-progress-${todayKey()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    msg.textContent = `Exported ${Object.keys(data.keys).length} keys.`;
+    if (window.aizhBeep) window.aizhBeep('ok');
+  });
+  importBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try { data = JSON.parse(reader.result); } catch { msg.innerHTML = '<span style="color:var(--err)">Invalid file.</span>'; return; }
+      if (!data || data._app !== 'ai-zero-to-hero' || typeof data.keys !== 'object' || data.keys === null) {
+        msg.innerHTML = '<span style="color:var(--err)">Not an AI Zero→Hero backup.</span>'; return;
+      }
+      // Validate the whole payload BEFORE touching localStorage.
+      const entries = Object.entries(data.keys).filter(([k]) => k.startsWith('aizh_'));
+      const badVal = entries.find(([, v]) => typeof v !== 'string');
+      if (badVal) { msg.innerHTML = '<span style="color:var(--err)">Corrupt backup (non-string value).</span>'; return; }
+      if (entries.length === 0) { msg.innerHTML = '<span style="color:var(--err)">Backup has no progress keys.</span>'; return; }
+      const n = entries.length;
+      if (!confirm(`Restore ${n} progress keys from this backup?\n\nThis overwrites your current progress in this browser. Continue?`)) return;
+      const res = transactionalRestore(entries, localStorage);
+      if (res.ok) {
+        msg.innerHTML = '<span style="color:var(--ok)">Restored. Reloading…</span>';
+        setTimeout(() => location.reload(), 700);
+      } else {
+        msg.innerHTML = '<span style="color:var(--err)">Restore failed (storage full) — your existing progress was kept.</span>';
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  });
 })();
 
 /* ================== FLASHCARDS (SM-2) ================== */

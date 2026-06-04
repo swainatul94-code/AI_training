@@ -7,12 +7,26 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <title>AI Zero → Hero · Learn AI from Curious Beginner to Pro Engineer</title>
-<meta name="description" content="The most fun way to learn AI. From 'what is a neuron' to building, training, and deploying real LLMs. Interactive demos, animated roadmap, zero fluff.">
+<meta name="description" content="The most fun way to learn AI — free. From 'what is a neuron' to building, training, and deploying real LLMs and agents. 26 deep concepts, 8 interactive demos, animated 14-phase roadmap, build-an-agent tutorial. Zero fluff.">
 <meta name="theme-color" content="#0a0e16">
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="AI Zero → Hero">
+<meta property="og:title" content="AI Zero → Hero — learn AI free, zero to hero">
+<meta property="og:description" content="From 'what is a neuron' to building, training & shipping real LLMs and agents. 26 deep concepts, 8 live demos, a build-an-agent-from-scratch tutorial, flashcards. Free, no account.">
+<meta property="og:url" content="https://swainatul94-code.github.io/AI_training/">
+<meta property="og:image" content="https://swainatul94-code.github.io/AI_training/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="AI Zero → Hero — learn AI free, zero to hero">
+<meta name="twitter:description" content="From neuron to neural net to LLMs to agents. 26 deep concepts, 8 live demos, build-an-agent tutorial. Free, interactive, no account.">
+<meta name="twitter:image" content="https://swainatul94-code.github.io/AI_training/icon-512.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AI Zero→Hero">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -341,6 +355,17 @@
         <span><b style="color:var(--accent)">total</b> <span id="hm-total">0</span> actions</span>
         <span><b style="color:var(--gold)">active</b> <span id="hm-days">0</span> days</span>
         <span><b style="color:var(--ok)">best</b> <span id="hm-best">0</span>/day</span>
+      </div>
+      <div style="margin-top:22px;padding:16px 18px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border)">
+        <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:12px">
+          <b style="color:var(--ink)">💾 Back up your progress.</b> All progress — phases, quizzes, streak, flashcards, activity — lives in this browser only. Clearing your browser wipes it. Export a backup file, restore it on any device.
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="demo-btn" id="prog-export">⬇ Export progress</button>
+          <button class="demo-btn alt" id="prog-import-btn">⬆ Import progress</button>
+          <input type="file" id="prog-import" accept="application/json,.json" style="display:none">
+          <span id="prog-msg" style="font-size:12.5px;color:var(--dim)"></span>
+        </div>
       </div>
     </div>
   </div>

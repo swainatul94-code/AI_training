@@ -1,6 +1,6 @@
 // Cache-first service worker for AI Zero → Hero
 // Single-file site, so we just cache the shell + assets and serve offline.
-const VERSION = 'aizh-v6';
+const VERSION = 'aizh-v7';
 // Critical = shell that MUST cache atomically, or install fails and old SW keeps serving.
 const CRITICAL = [
   './',
@@ -14,6 +14,10 @@ const OPTIONAL = [
   './ai_master_course.html',
   './AI_REFERENCE.md',
   './AI_ZERO_TO_HERO.md',
+  './icon-192.png',
+  './icon-512.png',
+  './favicon-32.png',
+  './404.html',
 ];
 
 self.addEventListener('install', e => {

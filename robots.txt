@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://swainatul94-code.github.io/AI_training/sitemap.xml
