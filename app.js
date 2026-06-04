@@ -829,6 +829,63 @@ const CONCEPTS = [
    <p><b>Jailbreaks</b> coax the model past its safety training to produce disallowed content via role-play, obfuscation, or clever framing. Red-team your own app before users do.</p>
    <p><b>Data leakage</b> — the model echoing secrets, PII, or another user's data. Don't put secrets in prompts; redact PII; isolate per-user context.</p>
    <p><b>Guardrails</b> are filters around the model (separate from its alignment): scan inputs for injection and outputs for unsafe content, PII, or off-topic use. The OWASP Top 10 for LLM Applications is the checklist to internalize. Golden rule: treat every token the model didn't get from <i>you</i> as untrusted, and never give an agent a capability whose worst-case misuse you can't tolerate.</p>`},
+
+  {id:"llm-end-to-end", tag:"foundations", title:"An LLM end to end: follow one prompt through the machine",
+   body:`<p>Let's trace exactly what happens when you send <i>"The capital of France is"</i> and the model replies <i>"Paris"</i>. Every box below is just matrix math — there is no lookup table, no database.</p>
+   <p><b>1. Tokenize.</b> Your text is split into tokens and mapped to integer IDs, e.g. [464, 3139, 286, 4881, 318]. The model has a fixed vocabulary (~50k–200k tokens); every input becomes a sequence of these IDs.</p>
+   <p><b>2. Embed.</b> Each ID indexes a row in the embedding matrix, turning each token into a vector of ~thousands of numbers. Positional information (RoPE) is mixed in so the model knows the order.</p>
+   <p><b>3. Transformer layers.</b> The sequence of vectors flows through dozens of identical blocks. In each: <b>attention</b> lets every token gather information from every earlier token (the word "capital" pulls context from "France"), then a <b>feed-forward network</b> transforms each token independently. Residual connections + layer norm keep it stable. After all layers, the vector sitting over the last token ("is") has absorbed the whole sentence's meaning.</p>
+   <p><b>4. Unembed to logits.</b> That final vector is multiplied by the output matrix to produce one score (a <b>logit</b>) for every token in the vocabulary. "Paris" scores high; "banana" scores low.</p>
+   <p><b>5. Sample.</b> Softmax turns logits into probabilities; the sampler (temperature, top-p) picks the next token — "Paris". That token is appended to the input, and steps 1–5 repeat to generate the next token, and the next. This is <b>autoregression</b>.</p>
+   <p>Crucially, the model isn't "recalling a fact." During pretraining, gradient descent tuned billions of weights so that the statistical continuation of "The capital of France is" lands on "Paris." Knowledge lives <i>distributed across the weights</i>, not in any single place. That's also why models hallucinate: a confident-sounding continuation can be statistically plausible but factually wrong. Everything else — chat, reasoning, tools — is this same next-token engine wrapped in clever prompting and training.</p>`},
+
+  {id:"future-ready", tag:"frontier", title:"Future-ready: where AI is going & how to not fall behind",
+   body:`<p>The field moves fast, but the <i>fundamentals</i> on this site age slowly — attention, gradients, tokenization, and evals will still matter in five years. What changes is the frontier on top. Here's where it's heading (as of 2026) and how to stay current without burning out.</p>
+   <p><b>1. Compute moves to inference.</b> Pretraining scaling is slowing; the action is now <b>test-time compute</b> — models that think longer, search, and self-verify per query. Expect "how hard should the model think about this?" to become a routine engineering knob.</p>
+   <p><b>2. Agents become the default interface.</b> Single chat turns give way to long-horizon agents that plan, use tools, and operate software (computer use). <b>MCP</b> is standardizing how tools plug in. The scarce skill becomes <i>agent reliability</i>: evals, guardrails, observability, and cost control — not prompt cleverness.</p>
+   <p><b>3. Verifiable training scales reasoning.</b> RL from verifiable rewards (math, code, tool success) keeps pushing reasoning without human labels. Skills that can be auto-graded will improve fastest; judgment-heavy, fuzzy tasks slower.</p>
+   <p><b>4. Multimodal + long context become table stakes.</b> Text-only, short-context assumptions are fading. Design for images, audio, and 1M-token windows.</p>
+   <p><b>5. Efficiency keeps democratizing.</b> Quantization, distillation, MoE, and small specialist models mean frontier-ish capability runs cheaply, even locally. The gap between "lab-only" and "your laptop" keeps shrinking.</p>
+   <p><b>How to stay future-ready:</b> (a) Own the fundamentals cold — they transfer to whatever ships next. (b) Build evals as a habit; they're how you'll evaluate any new model objectively. (c) Read 1 paper + 1 model card a week (use the AI tutor here to digest them). (d) Follow primary sources (lab blogs, model cards, arXiv) over hot takes. (e) Ship small projects on each new capability — hands-on beats reading. The half-life of a specific API is short; the half-life of "can learn and ship fast" is your whole career.</p>`},
+];
+
+/* ===== Build an Agent From Scratch: a runnable, progressive tutorial ===== */
+const AGENT_STEPS = [
+  {title:"What an agent actually is", lang:"text",
+   why:"Forget the hype. An agent is an LLM in a loop: you call the model, it asks to use a tool, you run the tool, you feed the result back, and you call the model again — until it decides it's finished. That's the whole idea. Everything below builds that loop one piece at a time, using nothing but the Anthropic SDK and standard Python.",
+   code:`Agent = LLM + Tools + Loop + Stop condition\n\n  1. Send conversation to the model\n  2. Model replies — either a final answer OR a request to call a tool\n  3. If tool request: run the tool, append the result, go to 1\n  4. If final answer: stop\n\nThat loop is "ReAct" (Reason + Act). Build it once and you\nunderstand every agent framework on the market.`},
+
+  {title:"Step 0 — Setup", lang:"bash",
+   why:"One dependency. Set your key as an environment variable so it never touches your code.",
+   code:`pip install anthropic\n\n# Windows PowerShell — persist the key, then reopen the shell\nsetx ANTHROPIC_API_KEY "sk-ant-..."\n\n# macOS / Linux\nexport ANTHROPIC_API_KEY="sk-ant-..."`},
+
+  {title:"Step 1 — A bare model call (the atom)", lang:"python",
+   why:"Before a loop, prove you can talk to the model. The whole agent is built on this one call. Note the shape: a list of messages in, a response with content blocks out.",
+   code:`import anthropic\n\nclient = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY\n\nresp = client.messages.create(\n    model="claude-sonnet-4-6",\n    max_tokens=1024,\n    messages=[{"role": "user", "content": "Say hi in 5 words."}],\n)\nprint(resp.content[0].text)\nprint("stop reason:", resp.stop_reason)  # 'end_turn'`},
+
+  {title:"Step 2 — Define a tool", lang:"python",
+   why:"A tool is just a function plus a JSON schema describing it. The schema is what the model sees; the function is what you run. Keep descriptions crisp — the model picks tools based on them.",
+   code:`# The real Python function\ndef get_weather(city: str) -> str:\n    # (pretend this calls a real weather API)\n    fake = {"Tokyo": "18°C, clear", "Paris": "12°C, rain"}\n    return fake.get(city, "Unknown city")\n\n# The schema the model sees\nTOOLS = [{\n    "name": "get_weather",\n    "description": "Get the current weather for a city.",\n    "input_schema": {\n        "type": "object",\n        "properties": {"city": {"type": "string", "description": "City name"}},\n        "required": ["city"],\n    },\n}]\n\n# A dispatcher maps tool name -> function\nTOOL_FNS = {"get_weather": get_weather}`},
+
+  {title:"Step 3 — The agent loop", lang:"python",
+   why:"Here is the core. Send the conversation with the tools attached. If the model's stop_reason is 'tool_use', it wants a tool: find the tool_use block, run the function, and append a tool_result message. Loop. When stop_reason is 'end_turn', it's answering — return.",
+   code:`def run_agent(user_msg, max_steps=10):\n    messages = [{"role": "user", "content": user_msg}]\n    for step in range(max_steps):\n        resp = client.messages.create(\n            model="claude-sonnet-4-6",\n            max_tokens=1024,\n            tools=TOOLS,\n            messages=messages,\n        )\n        # Record the assistant turn verbatim (text + any tool_use blocks)\n        messages.append({"role": "assistant", "content": resp.content})\n\n        if resp.stop_reason != "tool_use":\n            # Final answer — pull the text out and stop\n            return "".join(b.text for b in resp.content if b.type == "text")\n\n        # The model asked for one or more tools. Run each, collect results.\n        results = []\n        for block in resp.content:\n            if block.type == "tool_use":\n                output = TOOL_FNS[block.name](**block.input)\n                results.append({\n                    "type": "tool_result",\n                    "tool_use_id": block.id,\n                    "content": str(output),\n                })\n        # Feed results back as a user turn, then loop\n        messages.append({"role": "user", "content": results})\n    return "Stopped: hit max_steps."\n\nprint(run_agent("What's the weather in Tokyo? Should I take an umbrella?"))`},
+
+  {title:"Step 4 — Add more tools (a real toolbox)", lang:"python",
+   why:"The loop already handles any number of tools — you only extend the schema list and the dispatcher. Give the model a calculator and a clock and it will chain them: check time, then weather, then reason. No loop changes needed.",
+   code:`import datetime\n\ndef calculator(expression: str) -> str:\n    # SECURITY: never eval() untrusted input. Use a safe parser in production.\n    import ast, operator as op\n    ops = {ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul, ast.Div: op.truediv}\n    def ev(node):\n        if isinstance(node, ast.Constant): return node.value\n        if isinstance(node, ast.BinOp): return ops[type(node.op)](ev(node.left), ev(node.right))\n        raise ValueError("unsupported")\n    return str(ev(ast.parse(expression, mode="eval").body))\n\ndef now(_: str = "") -> str:\n    return datetime.datetime.now().isoformat(timespec="seconds")\n\nTOOLS += [\n  {"name":"calculator","description":"Evaluate a basic arithmetic expression.",\n   "input_schema":{"type":"object","properties":{"expression":{"type":"string"}},"required":["expression"]}},\n  {"name":"now","description":"Get the current date and time.",\n   "input_schema":{"type":"object","properties":{}}},\n]\nTOOL_FNS.update({"calculator": calculator, "now": now})`},
+
+  {title:"Step 5 — Memory: a system prompt + a scratchpad", lang:"python",
+   why:"The messages list IS the agent's short-term memory — it already remembers the whole conversation. For longer-term memory, give it a tool to write and read notes (a file, a dict, or a vector DB). A clear system prompt sets the agent's role, rules, and stopping criteria.",
+   code:`SYSTEM = (\n    "You are a careful research assistant. "\n    "Use tools when they help; do not guess facts you can look up. "\n    "Save durable findings with remember(). When the task is done, "\n    "give a concise final answer and stop."\n)\n\nMEMORY = {}\ndef remember(key: str, value: str) -> str:\n    MEMORY[key] = value\n    return f"saved {key}"\ndef recall(key: str) -> str:\n    return MEMORY.get(key, "(nothing saved)")\n\nTOOLS += [\n  {"name":"remember","description":"Store a fact for later.",\n   "input_schema":{"type":"object","properties":{"key":{"type":"string"},"value":{"type":"string"}},"required":["key","value"]}},\n  {"name":"recall","description":"Retrieve a stored fact by key.",\n   "input_schema":{"type":"object","properties":{"key":{"type":"string"}},"required":["key"]}},\n]\nTOOL_FNS.update({"remember": remember, "recall": recall})\n\n# pass system=SYSTEM in client.messages.create(...)`},
+
+  {title:"Step 6 — Make it production-safe", lang:"python",
+   why:"A naive loop can spin forever, burn money, or run a tool that throws. Three guards turn the toy into something you'd actually deploy: an iteration cap (already have it), a cost ceiling, and try/except around every tool call so one bad call doesn't kill the run. Log everything — agents fail in weird ways.",
+   code:`def run_agent_safe(user_msg, max_steps=10, max_cost_usd=0.50):\n    messages = [{"role": "user", "content": user_msg}]\n    cost = 0.0\n    for step in range(max_steps):\n        resp = client.messages.create(\n            model="claude-sonnet-4-6", max_tokens=1024,\n            system=SYSTEM, tools=TOOLS, messages=messages,\n        )\n        # rough cost: $3/M input, $15/M output (Sonnet)\n        u = resp.usage\n        cost += u.input_tokens * 3e-6 + u.output_tokens * 15e-6\n        print(f"[step {step}] stop={resp.stop_reason} cost=$"+f"{cost:.4f}")\n        if cost > max_cost_usd:\n            return f"Stopped: budget \${max_cost_usd} exceeded."\n\n        messages.append({"role": "assistant", "content": resp.content})\n        if resp.stop_reason != "tool_use":\n            return "".join(b.text for b in resp.content if b.type == "text")\n\n        results = []\n        for block in resp.content:\n            if block.type == "tool_use":\n                try:\n                    out = TOOL_FNS[block.name](**block.input)\n                except Exception as e:\n                    out = f"ERROR: {e}"   # feed errors back; let the model recover\n                results.append({"type":"tool_result","tool_use_id":block.id,"content":str(out)})\n        messages.append({"role": "user", "content": results})\n    return "Stopped: hit max_steps."`},
+
+  {title:"Step 7 — Where to go next", lang:"text",
+   why:"You now have a real agent: model + tools + loop + memory + guards. That is the foundation under every framework. Three directions to level up:",
+   code:`• MCP (Model Context Protocol) — instead of hand-wiring tools, expose\n  them as an MCP server once; any MCP client (Claude Desktop, your app,\n  the Agent SDK) can use them. The ecosystem standard for tools.\n\n• Claude Agent SDK — Anthropic's official harness. Gives you the loop,\n  subagents, file/bash tools, memory, and hooks out of the box, so you\n  write capabilities instead of plumbing.\n\n• Observability + evals — add Langfuse/Helicone to trace every step,\n  and build a golden set of tasks to measure success rate, cost, and\n  latency. Reliability — not cleverness — is what ships agents.\n\nGolden rule: never give an agent a tool whose worst-case misuse you\ncan't tolerate. Sandbox anything that touches files, shells, or money.`},
 ];
 
 /* ================== PROGRESS STORAGE ================== */
@@ -2347,6 +2404,16 @@ function buildPaletteIndex(){
     kind: 'phase', title: `Phase ${p.n} — ${p.name}`, sub: p.eli5.replace(/<[^>]+>/g,'').slice(0,80),
     icon: '📚', go: () => { openPhase(p.n); closePalette(); }
   }));
+  (typeof AGENT_STEPS !== 'undefined' ? AGENT_STEPS : []).forEach((s, i) => paletteIndex.push({
+    kind: 'agent', title: `Build Agent — ${s.title}`, sub: s.why.replace(/<[^>]+>/g,'').slice(0,80), icon: '🤖',
+    go: () => {
+      closePalette();
+      const sec = document.getElementById('build-agent');
+      if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
+      const step = document.querySelectorAll('#agent-steps .agent-step')[i];
+      if (step) setTimeout(() => step.scrollIntoView({behavior:'smooth', block:'center'}), 400);
+    }
+  }));
   GLOSSARY.forEach(([t, d]) => paletteIndex.push({
     kind: 'term', title: t, sub: d.slice(0,80), icon: '📖',
     go: () => {
@@ -2566,6 +2633,37 @@ function renderConcepts(filter=''){
 renderConcepts();
 const conceptSearch = document.getElementById('conceptSearch');
 if (conceptSearch) conceptSearch.addEventListener('input', e => renderConcepts(e.target.value));
+
+// Build-an-agent tutorial: numbered steps with explanation + copyable highlighted code
+(function(){
+  const host = document.getElementById('agent-steps');
+  if (!host || typeof AGENT_STEPS === 'undefined') return;
+  host.innerHTML = AGENT_STEPS.map((s, i) => `
+    <div class="agent-step">
+      <div class="agent-step-num">${(s.title.match(/Step (\d+)/) || [,'🤖'])[1]}</div>
+      <div class="agent-step-main">
+        <h3>${escapeHtml(s.title)}</h3>
+        <p class="agent-why">${s.why}</p>
+        <div class="codeblock">
+          <div class="codeblock-head">
+            <span class="lang">${escapeHtml(s.lang)}</span>
+            <button class="codeblock-copy" data-acopy="${i}">Copy</button>
+          </div>
+          <pre><code id="agentcode-${i}">${s.lang === 'text' ? escapeHtml(s.code) : highlight(s.code, s.lang)}</code></pre>
+        </div>
+      </div>
+    </div>`).join('');
+  host.querySelectorAll('[data-acopy]').forEach(b => {
+    b.addEventListener('click', () => {
+      const code = document.getElementById('agentcode-' + b.dataset.acopy).innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        b.textContent = '✓ Copied'; b.classList.add('copied');
+        setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 1400);
+        if (window.aizhBeep) window.aizhBeep('click');
+      });
+    });
+  });
+})();
 
 /* ================== SAVED PROGRESS DETECTION ================== */
 (function(){

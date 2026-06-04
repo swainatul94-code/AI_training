@@ -1351,6 +1351,34 @@ body.mode-lesson .lesson-page-bar{display:flex}
 .concept-body code{font-size:12.5px}
 #conceptSearch{margin-bottom:26px}
 
+/* ============ Build an Agent ============ */
+#agent-steps{max-width:880px;margin:0 auto;position:relative}
+#agent-steps::before{
+  content:"";position:absolute;left:19px;top:20px;bottom:20px;width:2px;
+  background:linear-gradient(180deg,var(--accent),var(--accent2),var(--gold));
+  opacity:.3;
+}
+@media(max-width:640px){#agent-steps::before{display:none}}
+.agent-step{display:flex;gap:18px;margin-bottom:26px;position:relative}
+.agent-step-num{
+  flex-shrink:0;width:40px;height:40px;border-radius:50%;
+  background:radial-gradient(circle,var(--panel-solid),var(--bg));
+  border:2px solid var(--accent);color:var(--accent);
+  display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;
+  z-index:1;box-shadow:0 0 0 6px var(--bg);
+}
+.agent-step-main{flex:1;min-width:0}
+.agent-step-main h3{
+  font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700;margin:6px 0 8px;
+  color:var(--ink);letter-spacing:-.01em;
+}
+.agent-why{font-size:14.5px;line-height:1.7;color:var(--muted);margin:0 0 12px}
+.agent-why b{color:var(--accent)}
+@media(max-width:640px){
+  .agent-step{gap:12px}
+  .agent-step-num{width:32px;height:32px;font-size:13px}
+}
+
 /* ============ Footer CTA ============ */
 .cta-final{
   text-align:center;padding:80px 24px;
