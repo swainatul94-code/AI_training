@@ -15,27 +15,35 @@ A hard constraint from user preference: **every explanation assumes zero prior k
 
 ## Architecture: split the monolith
 
+**Repo context (discovered during planning):** the repo root already hosts a separate main site (`index.html`, `styles.css`, `app.js`), a service worker (`sw.js`) that precaches pages, and a CI self-test (`test.mjs` via `.github/workflows/ci.yml`). Therefore:
+
+- The course shell **keeps its name** `ai_master_course.html` (main site, sw.js, and sitemap link to it). Root `index.html` belongs to the main site and is untouched.
+- All new course assets live under a `course/` folder, clearly separated from main-site assets.
+- `sw.js` must add the new files to its precache list and bump `VERSION` on each deploy stage.
+- `test.mjs` must be updated: its "inline script parses" check becomes "all `course/*.js` files parse", and its asset-existence scan must also cover `ai_master_course.html` references.
+
 ```
 AI_training/
-├── index.html              ← shell only: layout skeleton + <script src> tags
-├── css/styles.css          ← all current CSS + new animation CSS
-├── js/engine.js            ← all current app logic (XP, SRS, quizzes, games)
-├── js/content/
-│   ├── c01-setup.js        ← one file per phase (16 files),
-│   ├── c02-python.js          numbered by course order (c01–c16),
-│   ├── c03-first-app.js       not by phase label — avoids the
-│   ├── c04-math.js …          "Phase 0.5 vs Phase 5" name collision
-│   └── c16-portfolio.js
-├── js/reference.js         ← glossary + cheat sheets + model table data
-├── js/resources.js         ← curated external links per phase
-└── js/studyguide.js        ← roadmap/syllabus data
+├── ai_master_course.html   ← shell only: layout skeleton + <link> + <script src> tags
+├── course/
+│   ├── course.css          ← all current course CSS + new animation CSS
+│   ├── engine.js           ← all current app logic (XP, SRS, quizzes, games)
+│   ├── content/
+│   │   ├── c01-setup.js    ← one file per phase (16 files),
+│   │   ├── c02-python.js      numbered by course order (c01–c16),
+│   │   ├── c03-first-app.js   not by phase label — avoids the
+│   │   ├── c04-math.js …      "Phase 0.5 vs Phase 5" name collision
+│   │   └── c16-portfolio.js
+│   ├── reference.js        ← glossary + cheat sheets + model table data
+│   ├── resources.js        ← curated external links per phase
+│   └── studyguide.js       ← roadmap/syllabus data
 ```
 
 **Loading mechanism:** plain `<script src>` tags in dependency order (content files → reference/resources/studyguide → engine). Each content file does `COURSE_PHASES.push({...})` into a global array; the engine sorts by an explicit `order` field and builds `COURSE`. No `fetch()`, no modules — this keeps the site working both on GitHub Pages and when double-clicked from disk (file:// has no CORS-safe fetch).
 
 **Progress compatibility (critical):** phase `id` values stay exactly as today (`0, 1, 15, 2–14` — non-sequential, with Phase 0.75 as id 15) and the localStorage key is unchanged. Existing XP, streaks, quiz results, and SRS queue must survive the refactor byte-for-byte. The engine must always look up phases by `.find(p => p.id === …)`, never by array index.
 
-**Migration safety:** `ai_master_course.html` stays in the repo as a backup until the new split version is verified working, then is deleted.
+**Migration safety:** the monolith is converted to the shell in place (same filename, same URL); git history is the backup. The split is verified (browser + `node test.mjs`) before commit.
 
 **CSP note:** the existing CSP meta tag (`script-src 'self' 'unsafe-inline'`) already permits same-origin external JS files; it carries over to `index.html` unchanged.
 
@@ -87,7 +95,7 @@ Printable syllabus: week-by-week schedule paced for ~6–9 months, per-phase che
 
 - Assemble `COURSE` from `COURSE_PHASES` global (sort by `order`).
 - Three new view renderers: `renderReference()`, `renderResources()`, `renderStudyGuide()`.
-- New sidebar tabs wired into the existing tab system.
+- New sidebar tabs wired into the existing tab system (desktop sidebar `nav.tabs` only; the 5-button mobile bottom nav stays unchanged — on mobile the new views are reached via the hamburger drawer).
 - Glossary search box (simple substring filter).
 - Everything else — quiz engine, SRS, games, XP, badges, timer — unchanged.
 
