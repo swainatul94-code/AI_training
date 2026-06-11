@@ -460,6 +460,7 @@ button:not(:disabled):active{transform:scale(.96)}
 .ref-table th{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 @media print{
   header.topbar,aside,.mobile-nav,.tools,#streak-banner,.hero button{display:none!important}
+  .body{display:block}
   body,html{background:#fff!important;color:#111!important}
   main{max-width:100%;padding:0}
   h2,h3,h4{color:#111!important;-webkit-text-fill-color:#111!important;background:none!important}
