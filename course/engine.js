@@ -334,6 +334,7 @@ let state = loadProgress();
 let currentView = "phases";
 let currentPhase = 0;
 let currentGame = null;
+let _justAnsweredIdx = null;
 
 function loadProgress(){
   try{
@@ -729,6 +730,7 @@ function renderMain(){
   const mainEl = document.getElementById('main');
   mainEl.classList.remove('view-in'); void mainEl.offsetWidth; mainEl.classList.add('view-in');
   setupReveal();
+  _justAnsweredIdx = null;
 }
 
 function renderPhase(){
@@ -759,7 +761,7 @@ function renderPhase(){
     if(q.type==="mcq"){
       const opts = q.options.map((o,j)=>{
         let animCls = "";
-        if(saved.feedback && saved.choice===j) animCls = saved.correct ? " quiz-correct" : " quiz-wrong";
+        if(_justAnsweredIdx === i && saved.feedback && saved.choice===j) animCls = saved.correct ? " quiz-correct" : " quiz-wrong";
         return `<label class="${animCls.trim()}"><input type="radio" name="q${i}" value="${j}" ${saved.choice===j?"checked":""}> ${escapeHtml(o)}</label>`;
       }).join("");
       const fbCls = saved.feedback ? (saved.correct?"ok":"bad") : "";
@@ -1860,6 +1862,7 @@ async function submitMCQ(i, correctIdx){
   saveProgress();
   if(correct && !wasCorrect) addXP(10, "Correct answer");
   refreshBadges();
+  _justAnsweredIdx = i;
   renderMain();
 }
 function askConfidence(){
