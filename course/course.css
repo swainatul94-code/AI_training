@@ -441,3 +441,22 @@ details.try .ans{background:var(--code);padding:10px;border-radius:6px;border:1p
 .viz-tag.a{background:#7aa2ff}
 .viz-tag.b{background:#ffd166}
 .viz-tag.r{background:#3ecf8e}
+
+/* ===== Stage B: animations ===== */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .55s ease,transform .55s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.view-in{animation:fade-in .35s ease-out}
+@keyframes quiz-pulse{0%{box-shadow:0 0 0 0 rgba(62,207,142,.55)}100%{box-shadow:0 0 0 14px rgba(62,207,142,0)}}
+.quiz-correct{animation:quiz-pulse .7s ease-out;border-color:var(--ok)!important}
+@keyframes quiz-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.quiz-wrong{animation:quiz-shake .45s ease;border-color:var(--err)!important}
+@keyframes xp-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+#xp-bar-fill{background-size:200% 100%;animation:xp-shimmer 3.5s linear infinite}
+@keyframes lvl-burst{0%{box-shadow:0 0 0 0 rgba(255,209,102,.7)}100%{box-shadow:0 0 0 22px rgba(255,209,102,0)}}
+.lvl-burst{animation:lvl-burst .9s ease-out 2;border-radius:99px}
+button:not(:disabled):active{transform:scale(.96)}
+#hero-particles{position:absolute;inset:0;pointer-events:none;z-index:0}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+}
