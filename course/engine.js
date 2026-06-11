@@ -530,6 +530,8 @@ function addXP(amount, reason){
   while(state.xp >= xpTotalForLevel(state.level+1)){
     state.level++;
     xpPop(`Level up! Lv ${state.level}`);
+    const lvlEl = document.querySelector('header .stat.lvl');
+    if (lvlEl){ lvlEl.classList.remove('lvl-burst'); void lvlEl.offsetWidth; lvlEl.classList.add('lvl-burst'); }
   }
   saveProgress();
   xpPop(`+${amount} XP${reason?" · "+reason:""}`);
@@ -574,11 +576,21 @@ function xpPop(msg){
   el.classList.add("show");
   setTimeout(()=>el.classList.remove("show"), 1600);
 }
+function tweenNumber(el, to, ms = 600){
+  const from = parseInt(String(el.textContent).replace(/\D/g, ''), 10) || 0;
+  if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = to; return; }
+  const t0 = performance.now();
+  (function frame(t){
+    const k = Math.min(1, (t - t0) / ms);
+    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(frame);
+  })(t0);
+}
 function refreshHeader(){
   document.getElementById("level").textContent = state.level;
   const xpInLvl = state.xp - xpTotalForLevel(state.level);
   const xpNeed = xpForLevel(state.level);
-  document.getElementById("xp").textContent = xpInLvl;
+  tweenNumber(document.getElementById("xp"), xpInLvl);
   document.getElementById("xp-next").textContent = xpNeed;
   const pct = Math.max(0, Math.min(100, (xpInLvl/xpNeed)*100));
   document.getElementById("xp-bar-fill").style.width = `${pct}%`;
@@ -714,6 +726,9 @@ function renderMain(){
   else if(currentView==="review") renderReview();
   else if(currentView==="portfolio") renderPortfolio();
   else if(currentView==="badges") renderBadges();
+  const mainEl = document.getElementById('main');
+  mainEl.classList.remove('view-in'); void mainEl.offsetWidth; mainEl.classList.add('view-in');
+  setupReveal();
 }
 
 function renderPhase(){
@@ -742,7 +757,11 @@ function renderPhase(){
   const quizHtml = p.quiz.map((q,i)=>{
     const saved = ps.quiz[i] || {};
     if(q.type==="mcq"){
-      const opts = q.options.map((o,j)=>`<label><input type="radio" name="q${i}" value="${j}" ${saved.choice===j?"checked":""}> ${escapeHtml(o)}</label>`).join("");
+      const opts = q.options.map((o,j)=>{
+        let animCls = "";
+        if(saved.feedback && saved.choice===j) animCls = saved.correct ? " quiz-correct" : " quiz-wrong";
+        return `<label class="${animCls.trim()}"><input type="radio" name="q${i}" value="${j}" ${saved.choice===j?"checked":""}> ${escapeHtml(o)}</label>`;
+      }).join("");
       const fbCls = saved.feedback ? (saved.correct?"ok":"bad") : "";
       const fb = saved.feedback ? `<div class="feedback ${fbCls}">${saved.correct?"✓ Correct.":"✗ Not quite."} ${escapeHtml(q.explain)}</div>`:"";
       return `<div class="quiz">
@@ -838,6 +857,7 @@ function renderPhase(){
     if (typeof mountPhaseGame === 'function') mountPhaseGame(renderedPhaseId);
     // scroll-reveal animation
     if (typeof setupReveal === 'function') setupReveal();
+    mountParticles();
   }, 50);
 }
 
@@ -1586,11 +1606,13 @@ function renderReview(){
     else {
       const opts = (it.opts || []).map((o, j)=>{
         let cls = "";
+        let animCls = "";
         if(reviewShown){
           if(j === it.answer) cls = "background:rgba(62,207,142,.18);border-color:var(--ok)";
           else if(j === reviewChoice) cls = "background:rgba(255,107,107,.15);border-color:var(--err)";
+          if(j === reviewChoice) animCls = reviewChoice === it.answer ? " quiz-correct" : " quiz-wrong";
         }
-        return `<label style="display:block;background:var(--panel);border:1px solid var(--border);${cls};border-radius:6px;padding:8px 12px;margin:4px 0;cursor:pointer"><input type="radio" name="rq" value="${j}" ${reviewChoice===j?'checked':''} ${reviewShown?'disabled':''} onclick="reviewChoice=${j}; renderMain();"> ${escapeHtml(o)}</label>`;
+        return `<label class="${animCls.trim()}" style="display:block;background:var(--panel);border:1px solid var(--border);${cls};border-radius:6px;padding:8px 12px;margin:4px 0;cursor:pointer"><input type="radio" name="rq" value="${j}" ${reviewChoice===j?'checked':''} ${reviewShown?'disabled':''} onclick="reviewChoice=${j}; renderMain();"> ${escapeHtml(o)}</label>`;
       }).join("");
       inner += `<div class="card">
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px">From: ${escapeHtml(it.src||"")}</div>
@@ -2035,6 +2057,35 @@ async function timerFinish(){
 
 /* --------------------- BOOT --------------------- */
 function render(){ renderSidebar(); renderMain(); refreshHeader(); paintStreakBanner(); }
+
+/* ===== Stage B: particles ===== */
+function mountParticles(){
+  const hero = document.querySelector('#main .hero');
+  if (!hero || hero.querySelector('#hero-particles')) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.id = 'hero-particles'; hero.prepend(c);
+  const ctx = c.getContext('2d');
+  let w = 0, h = 0;
+  const dots = Array.from({ length: 36 }, () => ({
+    x: Math.random(), y: Math.random(), r: Math.random() * 1.8 + .6,
+    vx: (Math.random() - .5) * .0008, vy: (Math.random() - .5) * .0008,
+    a: Math.random() * .45 + .15,
+  }));
+  const size = () => { w = c.width = hero.clientWidth; h = c.height = hero.clientHeight; };
+  size(); addEventListener('resize', size);
+  (function tick(){
+    if (!document.body.contains(c)) return;       // hero re-rendered away — stop
+    if (!document.hidden){
+      ctx.clearRect(0, 0, w, h);
+      for (const d of dots){
+        d.x = (d.x + d.vx + 1) % 1; d.y = (d.y + d.vy + 1) % 1;
+        ctx.beginPath(); ctx.arc(d.x * w, d.y * h, d.r, 0, 7);
+        ctx.fillStyle = `rgba(122,162,255,${d.a})`; ctx.fill();
+      }
+    }
+    requestAnimationFrame(tick);
+  })();
+}
 
 /* ============ Per-phase interactive games (ported from new UI) ============ */
 const PHASE_GAMES = {
@@ -2721,14 +2772,18 @@ function gameRetrieve(host, signal){
 }
 
 /* Scroll-reveal observer for cards rendered into #main */
-let _revealIO = null;
+let _revealObs = null;
 function setupReveal(){
-  if (_revealIO) _revealIO.disconnect();
-  _revealIO = new IntersectionObserver(entries=>{
-    entries.forEach(e=>{ if (e.isIntersecting){ e.target.classList.add('in'); _revealIO.unobserve(e.target);} });
-  }, {threshold:.1, rootMargin:'0px 0px -40px 0px'});
-  document.querySelectorAll('#main .step-card, #main .card, #main .quiz, #main .phase-game').forEach(el=>{
-    el.classList.add('reveal-in'); _revealIO.observe(el);
+  if (_revealObs){ _revealObs.disconnect(); _revealObs = null; }
+  const cards = document.querySelectorAll('#main .step-card, #main .phase-game, #main .ref-card, #main .res-card, #main .guide-week');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ cards.forEach(c => c.classList.add('in')); return; }
+  _revealObs = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting){ e.target.classList.add('in'); _revealObs.unobserve(e.target); }
+  }), { threshold: .08 });
+  cards.forEach((c, i) => {
+    c.classList.add('reveal');
+    c.style.transitionDelay = `${Math.min(i, 6) * 60}ms`;
+    _revealObs.observe(c);
   });
 }
 updateStreak();
