@@ -226,16 +226,6 @@ pre .fn{color:#7aa2ff}
   animation:tok-pop .25s cubic-bezier(.16,1,.3,1);
 }
 @keyframes tok-pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}
-/* Scroll reveal animation for cards */
-.step-card,.card,.quiz,.phase-game{
-  opacity:1;transition:opacity .6s ease-out, transform .6s cubic-bezier(.16,1,.3,1);
-}
-.reveal-in{opacity:0;transform:translateY(18px)}
-.reveal-in.in{opacity:1;transform:translateY(0)}
-@media(prefers-reduced-motion:reduce){
-  .reveal-in,.reveal-in.in{opacity:1;transform:none;transition:none}
-  .phase-game::before{animation:none}
-}
 .card{background:linear-gradient(180deg,var(--panel) 0%,rgba(20,26,42,.6) 100%);border:1px solid var(--border-soft);border-radius:var(--rad);padding:18px;margin:14px 0;box-shadow:var(--shadow-sm);transition:all var(--t-base)}
 .card:hover{border-color:var(--border)}
 .tag{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(28,36,56,.6);color:var(--muted);font-size:11px;margin-right:6px;font-weight:600;letter-spacing:.02em;border:1px solid var(--border-soft)}

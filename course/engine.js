@@ -2074,10 +2074,11 @@ function mountParticles(){
     vx: (Math.random() - .5) * .0008, vy: (Math.random() - .5) * .0008,
     a: Math.random() * .45 + .15,
   }));
+  const ctrl = new AbortController();
   const size = () => { w = c.width = hero.clientWidth; h = c.height = hero.clientHeight; };
-  size(); addEventListener('resize', size);
+  size(); addEventListener('resize', size, { signal: ctrl.signal });
   (function tick(){
-    if (!document.body.contains(c)) return;       // hero re-rendered away — stop
+    if (!document.body.contains(c)){ ctrl.abort(); return; } // hero re-rendered away — stop + drop listener
     if (!document.hidden){
       ctx.clearRect(0, 0, w, h);
       for (const d of dots){
