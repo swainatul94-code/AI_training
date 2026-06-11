@@ -4,6 +4,108 @@ COURSE_PHASES.push(Object.assign({ order: 1 },
 { id:0, title:"Phase 0 — Setup", est:"1-2 hrs",
   intro:"Bad env kills learning. By end: Python, Claude API key, GitHub repo, working <code>test_claude.py</code>. Don't skip the explanations — they teach concepts you'll be quizzed on.",
   lessons:[
+    {h:"What IS artificial intelligence, actually?", body:`<p>Before installing anything, get the map straight. These four terms nest inside each other like Russian dolls:</p>
+<table>
+<tr><th>Term</th><th>What it means</th><th>Example</th></tr>
+<tr><td><b>AI</b></td><td>Any program that does something we'd call "smart"</td><td>Chess engine, spam filter, ChatGPT</td></tr>
+<tr><td><b>Machine Learning</b></td><td>AI that learns rules from examples instead of being hand-coded</td><td>Spam filter trained on 10,000 emails</td></tr>
+<tr><td><b>Deep Learning</b></td><td>ML using neural networks with many layers</td><td>Image recognition, speech-to-text</td></tr>
+<tr><td><b>LLM</b></td><td>Deep learning model trained on text to predict the next token</td><td>Claude, GPT</td></tr>
+</table>
+<p><b>Mental model:</b> AI is the building, ML is a floor in it, deep learning is a room on that floor, and LLMs are one (very loud) machine in that room. This course walks you from the front door to that machine.</p>
+<p><b>The single most important sentence in this course:</b> an LLM is a program that, given some text, predicts which token (word-piece) most likely comes next — and everything it appears to "know" or "reason" emerges from doing that prediction extremely well.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+<li>Thinking "AI" means one technology. It's an umbrella over very different tools.</li>
+<li>Thinking LLMs look things up in a database. They don't — they generate from learned patterns (which is also why they can confidently make things up).</li>
+<li>Thinking you must master ALL of AI. You're following one path: the LLM path.</li>
+</ul>`},
+    {h:"How a computer 'learns' — the 60-second version", body:`<p>Forget sci-fi. Learning, in machine learning, is a very mechanical loop of three steps: <b>guess, measure the error, nudge the dials</b>. Repeat millions of times.</p>
+<p>A model is a machine with millions of <b>parameters</b> (think: dials). Each parameter is just a number. Before training, those numbers are random garbage. Training turns them into something useful.</p>
+<p><b>Mental model:</b> imagine a single-dial machine that predicts house prices. The dial multiplies the house's size in square meters to produce a price guess. You start the dial at some random value and improve it by measuring how wrong it is on real sales data. That "how wrong" measurement is called the <b>loss</b> (or error). Each time you measure the loss, you nudge every dial a tiny bit in the direction that would have made the loss smaller. Do this enough times and the dials settle at values that make good predictions.</p>
+<p><b>Worked example:</b> one dial, one house.</p>
+<ul>
+  <li>House size: 100 m²</li>
+  <li>Actual sale price: 150,000</li>
+  <li>Dial starts at: 1,000</li>
+  <li>Guess: 1,000 × 100 = 100,000</li>
+  <li>Error (loss): 150,000 − 100,000 = 50,000 — too low</li>
+  <li>Nudge dial up to 1,200</li>
+  <li>New guess: 1,200 × 100 = 120,000</li>
+  <li>New error: 150,000 − 120,000 = 30,000 — smaller!</li>
+  <li>Keep nudging… eventually dial ≈ 1,500 → guess = 150,000 → error ≈ 0</li>
+</ul>
+<p>That loop — guess, measure loss, nudge — run a million times across millions of dials and millions of examples, IS training. A real LLM does the same thing, just with billions of dials and the task being "predict the next word in a sentence" instead of house prices.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+<li>Thinking the machine <em>understands</em> anything. It doesn't. It finds dial settings that minimize error on training data. "Understanding" is a metaphor.</li>
+<li>Thinking more data always fixes everything. Data quality matters as much as quantity. Garbage in, garbage out.</li>
+<li>Thinking training is something you do often. You train once (or fine-tune occasionally). Inference (using the trained model) is the everyday action.</li>
+</ul>`},
+    {h:"What happens when you call the Claude API (the full journey)", body:`<p>Every time your code calls Claude, a specific sequence of events happens. Knowing this sequence means you can diagnose problems at each step instead of guessing.</p>
+<p>Here is the journey of one request, start to finish:</p>
+<ol>
+  <li><b>Your Python builds a JSON object</b> — model name, max_tokens, messages list. This is your request payload.</li>
+  <li><b>HTTPS POST to api.anthropic.com</b> — the JSON travels over the internet, encrypted.</li>
+  <li><b>Anthropic's gateway checks your API key</b> — if the key is missing or wrong, you get a 401 AuthenticationError right here, before Claude ever sees your text.</li>
+  <li><b>Your text is tokenized</b> — split into word-pieces (tokens). "Tokenization" is not splitting on spaces; "unhappiness" might become ["un", "happiness"]. You're billed per token.</li>
+  <li><b>GPUs predict tokens one at a time</b> — Claude's model runs on a cluster of GPUs. It outputs one token, appends it to context, outputs the next, repeat — until it predicts a stop token or hits max_tokens.</li>
+  <li><b>JSON response returns</b> — wraps the generated text, token counts, stop reason.</li>
+  <li><b>Your code reads <code>msg.content[0].text</code></b> — extracts the string from the structured response.</li>
+</ol>
+<p><b>Mental model:</b> think of a restaurant. The API documentation is the menu. Your request is the order. Anthropic's gateway is the front-of-house who checks your reservation (key). The GPU cluster is the kitchen. The JSON response is the dish arriving at your table. The token count on your bill tells you how much kitchen time you used.</p>
+<p>Why does this matter? When something goes wrong, you now know <em>which step</em> failed. AuthenticationError = step 3. Response is truncated = you hit max_tokens at step 5. Slow response = step 5 is generating a long answer token by token.</p>`, code:`# REQUEST — what your Python sends
+{
+  "model": "claude-haiku-4-5-20251001",
+  "max_tokens": 100,
+  "messages": [
+    {"role": "user", "content": "What is 2 + 2?"}
+  ]
+}
+
+# RESPONSE — what Anthropic sends back
+{
+  "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+  "type": "message",
+  "role": "assistant",
+  "content": [
+    {
+      "type": "text",
+      "text": "2 + 2 = 4"
+    }
+  ],
+  "model": "claude-haiku-4-5-20251001",
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 14,   # you paid for these
+    "output_tokens": 9    # and these
+  }
+}`},
+    {h:"How to read an error message without panicking", body:`<p>Error messages feel scary when you're new. They're actually the most useful text in programming — they tell you exactly what went wrong and where. The trick: read them <b>bottom-up</b>.</p>
+<p>A Python error printout is called a <b>traceback</b>. It shows the chain of function calls that led to the crash. The <b>last line</b> is the actual error. The lines above it are the call stack — where the code was when it crashed.</p>
+<p><b>Example traceback:</b></p>
+<pre>Traceback (most recent call last):
+  File "test_claude.py", line 5, in &lt;module&gt;
+    client = anthropic.Anthropic()
+  File "anthropic/_client.py", line 82, in __init__
+    raise AuthenticationError(...)
+anthropic.AuthenticationError: No API key provided.</pre>
+<p>Read from the bottom: <code>AuthenticationError: No API key provided</code> — that's the problem. The line above says it happened inside <code>anthropic/_client.py</code>. The line above <em>that</em> says your <code>test_claude.py</code> line 5 triggered it. Fix: set your API key. You don't need to read the middle lines to know that.</p>
+<p><b>The five errors beginners hit most:</b></p>
+<table>
+<tr><th>Error</th><th>What it means</th><th>Fix</th></tr>
+<tr><td><b>ModuleNotFoundError</b></td><td>You're importing a library that isn't installed</td><td>Run <code>uv pip install &lt;name&gt;</code> in PowerShell</td></tr>
+<tr><td><b>AuthenticationError</b></td><td>API key is missing or wrong</td><td>Run <code>setx</code> with the correct key, then close + reopen PowerShell</td></tr>
+<tr><td><b>SyntaxError</b></td><td>Python can't parse your code — typo, missing colon, unclosed quote</td><td>Look at the line number given; check for missing <code>:</code> after <code>if</code>/<code>def</code>, or unclosed <code>"</code></td></tr>
+<tr><td><b>IndentationError</b></td><td>Wrong number of leading spaces inside a block</td><td>Use 4 spaces consistently; never mix tabs and spaces</td></tr>
+<tr><td><b>NameError</b></td><td>Used a variable before defining it, or misspelled a name</td><td>Check spelling; make sure the variable is defined above the line that crashes</td></tr>
+</table>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+<li>Reading the traceback top-down. The top is where the call started, not where it broke. Start at the bottom.</li>
+<li>Retyping your entire script because "something is wrong." Read the line number — it's almost always exactly that line.</li>
+<li>Ignoring the error type (the word before the colon). The type tells you the category of the problem immediately.</li>
+</ul>`},
     {h:"What you're installing and why (read first)", body:`<p>Five tools. Each has a job:</p>
     <table>
       <tr><th>Tool</th><th>What it does</th><th>Why you need it</th></tr>
