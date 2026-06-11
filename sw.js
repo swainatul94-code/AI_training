@@ -1,6 +1,6 @@
 // Cache-first service worker for AI Zero → Hero
 // Single-file site, so we just cache the shell + assets and serve offline.
-const VERSION = 'aizh-v7';
+const VERSION = 'aizh-v8';
 // Critical = shell that MUST cache atomically, or install fails and old SW keeps serving.
 const CRITICAL = [
   './',
@@ -12,6 +12,24 @@ const CRITICAL = [
 // Optional = nice-to-have, allowed to fail individually.
 const OPTIONAL = [
   './ai_master_course.html',
+  './course/course.css',
+  './course/engine.js',
+  './course/content/c01-setup.js',
+  './course/content/c02-python.js',
+  './course/content/c03-first-app.js',
+  './course/content/c04-math.js',
+  './course/content/c05-python-ml.js',
+  './course/content/c06-classical-ml.js',
+  './course/content/c07-deep-learning.js',
+  './course/content/c08-nlp.js',
+  './course/content/c09-transformers.js',
+  './course/content/c10-pretrain.js',
+  './course/content/c11-finetune.js',
+  './course/content/c12-claude-apps.js',
+  './course/content/c13-rag.js',
+  './course/content/c14-agents.js',
+  './course/content/c15-mlops.js',
+  './course/content/c16-portfolio.js',
   './AI_REFERENCE.md',
   './AI_ZERO_TO_HERO.md',
   './icon-192.png',

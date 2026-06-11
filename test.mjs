@@ -92,15 +92,16 @@ if (appCtx && typeof appCtx.transactionalRestore === 'function') {
   bad('transactionalRestore not exported from app.js');
 }
 
-// ---- 2. Legacy inline script parses ----
-console.log('ai_master_course.html inline script:');
+// ---- 2. Course JS files parse ----
+console.log('course script files parse:');
 try {
-  const h = readFileSync(new URL('./ai_master_course.html', import.meta.url), 'utf8');
-  const scripts = h.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
-  scripts.forEach((s) => new Function(s.replace(/<\/?script[^>]*>/g, '')));
-  ok(`${scripts.length} inline script block(s) parse`);
+  const { readdirSync } = await import('node:fs');
+  const files = ['engine.js',
+    ...readdirSync(new URL('./course/content/', import.meta.url)).map(f => 'content/' + f)];
+  files.forEach(f => new Function(readFileSync(new URL('./course/' + f, import.meta.url), 'utf8')));
+  ok(`${files.length} course file(s) parse`);
 } catch (e) {
-  bad(`legacy script parse error: ${e.message}`);
+  bad(`course script parse error: ${e.message}`);
 }
 
 // ---- 3. Referenced local assets exist ----
@@ -109,6 +110,11 @@ const index = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const refs = [...index.matchAll(/(?:src|href)="([^":?#]+\.(?:js|css|png|webmanifest))"/g)].map(m => m[1]);
 [...new Set(refs)].forEach((r) => {
   existsSync(new URL('./' + r, import.meta.url)) ? ok(r) : bad(`missing referenced asset: ${r}`);
+});
+const courseHtml = readFileSync(new URL('./ai_master_course.html', import.meta.url), 'utf8');
+const courseRefs = [...courseHtml.matchAll(/(?:src|href)="([^":?#]+\.(?:js|css|png|webmanifest))"/g)].map(m => m[1]);
+[...new Set(courseRefs)].forEach((r) => {
+  existsSync(new URL('./' + r, import.meta.url)) ? ok('course: ' + r) : bad(`missing course asset: ${r}`);
 });
 
 // ---- 4. Service-worker critical assets exist ----
