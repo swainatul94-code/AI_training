@@ -708,6 +708,23 @@ function renderSidebar(){
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px">Track per-phase deliverables: GitHub repo, HF Hub model, blog post. Each adds XP + unlocks badges.</div>`;
   } else if(currentView==="badges"){
     el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:8px">Earn badges by completing phases, beating games, building portfolio, keeping streaks.</div>`;
+  } else if(currentView==="reference"){
+    el.innerHTML = `
+      <button class="item" onclick="document.getElementById('ref-glossary')?.scrollIntoView({behavior:'smooth'})">Glossary</button>
+      <button class="item" onclick="document.getElementById('ref-cheats')?.scrollIntoView({behavior:'smooth'})">Cheat sheets</button>
+      <button class="item" onclick="document.getElementById('ref-models')?.scrollIntoView({behavior:'smooth'})">Models</button>
+      <button class="item" onclick="document.getElementById('ref-onepage')?.scrollIntoView({behavior:'smooth'})">LLM on one page</button>`;
+  } else if(currentView==="resources"){
+    el.innerHTML = (window.RESOURCES || []).map(r => {
+      const p = COURSE.find(x => x.id === r.phaseId);
+      if (!p) return "";
+      return `<button class="item" onclick="document.getElementById('res-${r.phaseId}')?.scrollIntoView({behavior:'smooth'})">${escapeHtml(p.title)}</button>`;
+    }).join("");
+  } else if(currentView==="guide"){
+    el.innerHTML = `
+      <button class="item" onclick="document.getElementById('guide-schedule')?.scrollIntoView({behavior:'smooth'})">Schedule</button>
+      <button class="item" onclick="document.getElementById('guide-checkpoints')?.scrollIntoView({behavior:'smooth'})">Checkpoints</button>
+      <button class="item" onclick="window.print()">🖨️ Print</button>`;
   }
   // refresh review due badge
   const dueBadge = document.getElementById("review-due-badge");
@@ -727,6 +744,9 @@ function renderMain(){
   else if(currentView==="review") renderReview();
   else if(currentView==="portfolio") renderPortfolio();
   else if(currentView==="badges") renderBadges();
+  else if(currentView==="reference") renderReference();
+  else if(currentView==="resources") renderResources();
+  else if(currentView==="guide") renderStudyGuide();
   const mainEl = document.getElementById('main');
   mainEl.classList.remove('view-in'); void mainEl.offsetWidth; mainEl.classList.add('view-in');
   setupReveal();
@@ -1762,6 +1782,60 @@ function updatePortfolio(phaseId, kind, value){
   }
   refreshBadges();
   renderMain();
+}
+
+/* ===== Stage C: reference / resources / study guide views ===== */
+function renderReference(){
+  const R = window.REFERENCE || {};
+  const main = document.getElementById("main");
+  const cheatHtml = (R.cheats || []).map(c => `
+    <div class="ref-card"><h4>${escapeHtml(c.title)}</h4>
+      <table>${c.rows.map(r => `<tr><td><code>${escapeHtml(r[0])}</code></td><td>${escapeHtml(r[1])}</td></tr>`).join("")}</table>
+    </div>`).join("");
+  const modelHtml = `<table class="ref-table"><tr><th>Model</th><th>ID</th><th>Use for</th><th>Cost</th></tr>
+    ${(R.models || []).map(m => `<tr><td><b>${escapeHtml(m.name)}</b></td><td><code>${escapeHtml(m.id)}</code></td><td>${escapeHtml(m.use)}</td><td>${escapeHtml(m.cost)}</td></tr>`).join("")}</table>`;
+  main.innerHTML = `
+    <div class="hero"><h2>📖 Reference Library</h2><p class="intro-text">Look things up while you study. Search the glossary, skim a cheat sheet, or read the one-page LLM explainer.</p></div>
+    <h3 id="ref-glossary">Glossary</h3>
+    <input id="gloss-search" type="search" placeholder="Search ${(R.glossary || []).length} terms…" oninput="glossaryFilter(this.value)"
+      style="width:100%;max-width:420px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--ink);font-size:14px">
+    <div id="gloss-list"></div>
+    <h3 id="ref-cheats">Cheat sheets</h3>${cheatHtml}
+    <h3 id="ref-models">Claude models</h3><div class="ref-card">${modelHtml}
+      <p style="color:var(--muted);font-size:12px">IDs change with releases — verify at docs.anthropic.com/en/docs/about-claude/models</p></div>
+    <h3 id="ref-onepage">How an LLM works — on one page</h3><div class="ref-card">${R.onePage || ""}</div>`;
+  glossaryFilter("");
+}
+function glossaryFilter(q){
+  const R = window.REFERENCE || {}; q = String(q).trim().toLowerCase();
+  const hits = (R.glossary || []).filter(g => !q || g.t.toLowerCase().includes(q) || g.d.toLowerCase().includes(q));
+  document.getElementById("gloss-list").innerHTML = hits.length
+    ? `<div class="gloss-grid">${hits.map(g => `<div class="ref-card"><b>${escapeHtml(g.t)}</b><p>${escapeHtml(g.d)}</p></div>`).join("")}</div>`
+    : `<p style="color:var(--muted)">No matching terms.</p>`;
+}
+function renderResources(){
+  const main = document.getElementById("main");
+  const blocks = (window.RESOURCES || []).map(r => {
+    const p = COURSE.find(x => x.id === r.phaseId);
+    if (!p) return "";
+    return `<h3 id="res-${r.phaseId}">${escapeHtml(p.title)}</h3>` + r.items.map((it, i) => `
+      <div class="res-card ref-card"><b>${i + 1}. <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(it.title)}</a></b>
+      <p>${escapeHtml(it.why)}</p></div>`).join("");
+  }).join("");
+  main.innerHTML = `<div class="hero"><h2>🔗 Curated Resources</h2><p class="intro-text">The best free material on the internet, in watch order, per phase. Numbers = recommended order.</p></div>${blocks}`;
+}
+function renderStudyGuide(){
+  const G = window.STUDY_GUIDE || {};
+  const main = document.getElementById("main");
+  main.innerHTML = `
+    <div class="hero"><h2>🗓️ Study Guide</h2><p class="intro-text">${escapeHtml(G.pace || "")}</p>
+      <button class="tool" onclick="window.print()" style="margin-top:8px">🖨️ Print this guide</button></div>
+    <h3 id="guide-schedule">Week-by-week schedule</h3>
+    <table class="ref-table guide-table"><tr><th>Week</th><th>Phase</th><th>Focus</th><th>Done when…</th></tr>
+      ${(G.weeks || []).map(w => `<tr><td>${escapeHtml(w.wk)}</td><td>${escapeHtml(w.phase)}</td><td>${escapeHtml(w.focus)}</td><td>${escapeHtml(w.goal)}</td></tr>`).join("")}</table>
+    <h3 id="guide-checkpoints">Ready for the next phase? Self-checks</h3>
+    ${(G.checkpoints || []).map(c => `<div class="guide-week ref-card"><h4>After ${escapeHtml(c.after)}</h4>
+      <ul>${c.check.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`).join("")}`;
 }
 
 /* --------------------- BADGES VIEW --------------------- */
