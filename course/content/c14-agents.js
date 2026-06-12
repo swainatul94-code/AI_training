@@ -60,6 +60,120 @@ COURSE_PHASES.push(Object.assign({ order: 14 },
       <li>Log (prompt, response, tools, tokens, latency, $) per step</li>
       <li><a href="https://langfuse.com" target="_blank">Langfuse</a>, <a href="https://helicone.ai" target="_blank">Helicone</a>, or SQLite+dashboard</li>
     </ul>`},
+
+    {h:"An agent is a loop", body:`<p>Strip away all the marketing language and an AI agent is three things: an LLM, a set of tools, and a while-loop. That is it. At each iteration of the loop, the model decides what to do next based on everything that has happened so far. The loop ends when the model declares it is finished.</p>
+    <p><b>Concrete trace: "Find the cheapest flight Sydney to Tokyo in March"</b></p>
+    <p>The messages list starts with just the user's request. Watch how it grows.</p>
+    <ul>
+      <li><b>Turn 1:</b> model sees the user request, calls <code>search_flights(origin="SYD", destination="TYO", month="March")</code>. Your code runs the function. 23 results appended to messages.</li>
+      <li><b>Turn 2:</b> model sees 23 results, calls <code>filter_by_price(results=..., max_price=800)</code>. Your code runs it. 5 results appended to messages.</li>
+      <li><b>Turn 3:</b> model sees the 5 filtered results and writes the final answer: "The cheapest flight is Jetstar JS101 at $642." Stop reason is <code>end_turn</code> (not <code>tool_use</code>), so the loop exits.</li>
+    </ul>
+    <p>Notice the messages list grew from 1 item to 7 items across three turns. The model's "memory" of prior steps is entirely in that growing list — there is no hidden state.</p>
+    <div class="mistake"><b>Common mistake:</b> no maximum-iterations cap on the loop. If something goes wrong (bad tool output, ambiguous task, the model gets "confused"), the loop can run forever, calling tools repeatedly and burning API costs. Always add a <code>max_turns</code> limit and a dollar-spend cap that kills the loop if either is exceeded.</div>`,
+    code:`import anthropic
+client = anthropic.Anthropic()
+
+TOOLS = [
+    {
+        "name": "search_flights",
+        "description": "Search for flights between two cities in a given month.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "origin": {"type": "string"},
+                "destination": {"type": "string"},
+                "month": {"type": "string"}
+            },
+            "required": ["origin", "destination", "month"]
+        }
+    }
+]
+
+def run_tool(name, args):
+    # In a real app, call an actual flights API here.
+    if name == "search_flights":
+        return "Flight results: Jetstar JS101 $642, Qantas QF21 $890"
+    return "unknown tool"
+
+messages = [{"role": "user", "content": "Find cheapest flight Sydney to Tokyo in March"}]
+
+MAX_TURNS = 10
+for turn in range(MAX_TURNS):
+    resp = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        tools=TOOLS,
+        messages=messages,
+    )
+    messages.append({"role": "assistant", "content": resp.content})
+
+    if resp.stop_reason == "end_turn":
+        # The model finished. Print the final answer.
+        print(next(b.text for b in resp.content if b.type == "text"))
+        break
+
+    # The model wants to call a tool.
+    results = []
+    for block in resp.content:
+        if block.type == "tool_use":
+            output = run_tool(block.name, block.input)
+            results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": output
+            })
+    messages.append({"role": "user", "content": results})
+else:
+    print("Reached max turns without finishing.")`},
+
+    {h:"Tool design rules", body:`<p>The quality of your tools determines the reliability of your agent far more than which model you use. A poorly described tool will be misused or skipped. A well-described tool gives the model everything it needs to make the right call.</p>
+    <h4>Rule 1: Keep the tool count small</h4>
+    <p>Between 3 and 7 tools is the sweet spot for most agents. When a model sees 30 tools, it has to choose among them for every step — choice paralysis leads to wrong calls. If you have many related functions, group them or let the agent request more tools as needed.</p>
+    <h4>Rule 2: Names say what the tool does</h4>
+    <ul>
+      <li><b>Bad:</b> <code>helper2</code>, <code>process_data</code>, <code>do_thing</code></li>
+      <li><b>Good:</b> <code>search_flights_by_route</code>, <code>get_customer_order_history</code>, <code>send_support_email</code></li>
+    </ul>
+    <h4>Rule 3: Descriptions are written for the model, not for humans</h4>
+    <p>The description should answer three questions: (1) when should I call this tool? (2) when should I NOT call it? (3) what does a valid call look like?</p>
+    <h4>Rule 4: Use typed schemas with required fields</h4>
+    <p>The <code>input_schema</code> tells the model what arguments to provide and what type each should be. Always mark fields as required if the tool will fail without them. The model reads the schema and constructs the arguments — a clear schema reduces argument errors.</p>
+    <h4>Rule 5: Return errors as result content, not as exceptions</h4>
+    <p>If a tool fails (invalid city code, network timeout, permission denied), do NOT raise an exception that crashes the loop. Instead, return a plain-English error string as the tool result so the model can read it and self-correct.</p>
+    <ul>
+      <li><b>Bad:</b> <code>raise ValueError("Unknown city code")</code> &rarr; crashes the agent loop</li>
+      <li><b>Good:</b> return <code>"error: city code 'XYZ' not recognised. Use IATA codes like SYD, TYO, LHR."</code> &rarr; model sees the error and tries a corrected argument next turn</li>
+    </ul>
+    <div class="mistake"><b>Common mistake:</b> writing tool descriptions aimed at human readers ("This helper function processes the input data and returns the result"). The model needs operational guidance, not documentation. Write: "Use this tool when the user asks about flight prices. Do NOT use this for hotel searches. Provide origin and destination as IATA airport codes (e.g. SYD, NRT)."</div>`},
+
+    {h:"Why agents fail: error compounding", body:`<p>This is the most important reliability concept for agent builders. It sounds like simple maths but the implications are severe.</p>
+    <p><b>The maths:</b> suppose each step in your agent has a 95% chance of succeeding. That sounds excellent. But success for the whole task requires every step to succeed.</p>
+    <ul>
+      <li>10 steps: 0.95<sup>10</sup> &asymp; 0.599 &asymp; <b>60% task success rate</b></li>
+      <li>20 steps: 0.95<sup>20</sup> &asymp; 0.358 &asymp; <b>36% task success rate</b></li>
+    </ul>
+    <p>A 95%-reliable agent over 20 steps succeeds only about a third of the time. Reliability falls <b>exponentially</b> as chain length grows. This is why experienced agent builders keep chains short.</p>
+    <p><b>Mitigations — in order of effectiveness:</b></p>
+    <ol>
+      <li><b>Fewer, bigger steps.</b> Instead of 10 small tool calls, design 3 larger ones. Each combines what would have been multiple actions. Fewer steps means fewer failure points.</li>
+      <li><b>Checkpoints.</b> After major steps, validate the intermediate result before continuing. "Does this list of flights make sense? Are there at least 2 results?" If validation fails, stop and report rather than continuing with garbage input.</li>
+      <li><b>Verification steps.</b> After the agent produces an output, a cheap second LLM call checks: "Does this output satisfy the original goal?" If not, retry once. This catches silent failures where the model produced something plausible but wrong.</li>
+      <li><b>Fail fast and report.</b> When something goes wrong, stop and tell the user rather than continuing with a corrupted state. A clear error message is better than a confident wrong answer.</li>
+    </ol>
+    <div class="mistake"><b>Common mistake:</b> designing a 20-step agent pipeline and expecting it to be reliable. At 95% per-step accuracy, a 20-step pipeline has roughly a coin-flip chance of completing successfully. If your task truly needs 20 steps, plan for failures: checkpoints, retries, and human review of outputs.</div>`},
+
+    {h:"Guardrails and the human in the loop", body:`<p>Every guardrail in an agent is a <b>line of code</b>, not a line in the system prompt. "Be careful" in a prompt is not a guardrail. <code>if spend &gt; limit: stop()</code> is a guardrail. This distinction matters because the model can be tricked, confused, or simply wrong — your code cannot be prompted into ignoring a hard limit.</p>
+    <table>
+      <tr><th>What to guard</th><th>How (in code)</th></tr>
+      <tr><td>Spend cap</td><td>Count tokens per session (from <code>resp.usage</code>). Hard-stop the loop when cumulative cost exceeds your limit. Never let the model decide when to stop spending.</td></tr>
+      <tr><td>Allowed-tools list</td><td>An agent built for handling refunds should have NO access to <code>delete_user</code> or <code>send_mass_email</code>. Only give tools needed for the specific task. This is the principle of <b>least privilege</b>.</td></tr>
+      <tr><td>Confirm before irreversible actions</td><td>Tools that send emails, charge cards, or delete data should return a sentinel string like <code>"CONFIRMATION REQUIRED: about to send email to 200 users. Confirm? yes/no"</code>. Your code pauses and waits for a human click before executing.</td></tr>
+      <tr><td>Audit log</td><td>Append every tool call, its arguments, and its result to a log file. If something goes wrong, you must be able to reconstruct exactly what the agent did and in what order.</td></tr>
+      <tr><td>Output filter</td><td>Validate the agent's final answer before showing it to the user. If the task requires JSON output, parse it; if parsing fails, surface an error instead of malformed text.</td></tr>
+    </table>
+    <p><b>Principle: minimum tools for the job.</b> Before adding a tool to an agent, ask: "Could this tool cause irreversible harm if called with wrong arguments?" If yes, either remove it, add a confirmation gate, or scope it to only safe operations (read-only variant).</p>
+    <div class="mistake"><b>Common mistake:</b> giving one "super agent" all available tools and relying on the system prompt to constrain its behaviour. System prompts can be worked around. The only reliable constraint is removing the tool from the agent's definition entirely.</div>`},
   ],
   quiz:[
     {type:"mcq", q:"Agent stuck repeating same tool. Fix?", options:["Bigger model","Detect repeated (tool,args) → break loop with 'try different' nudge","More steps","No streaming"], answer:1, explain:"Cheapest reliable fix. Bigger model only marginal."},

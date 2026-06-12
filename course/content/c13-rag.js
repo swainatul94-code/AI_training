@@ -72,6 +72,58 @@ COURSE_PHASES.push(Object.assign({ order: 13 },
       <li>Relevance: does it answer the question?</li>
       <li><a href="https://github.com/explodinggradients/ragas" target="_blank">RAGAS</a></li>
     </ul>`},
+
+    {h:"Why RAG exists", body:`<p>Before we get into how RAG works, it helps to understand the three problems it solves.</p>
+    <p><b>Problem 1: Knowledge cutoff.</b> Every LLM is trained on data collected up to a certain date. After that date, the model knows nothing about what happened in the world. If you ask it about a news event from last week, it will either say it does not know or, worse, confidently make something up.</p>
+    <p><b>Problem 2: Private data.</b> Your company's internal wiki, your personal notes, your customer database — none of these were in the model's training data. The model has never seen them.</p>
+    <p><b>Problem 3: Hallucination.</b> When a model does not know the answer, it sometimes invents a plausible-sounding one rather than admitting ignorance. This is called hallucination, and it is one of the most dangerous failure modes of LLMs.</p>
+    <p><b>RAG's fix:</b> instead of relying on what the model memorised during training, you fetch the relevant documents at question-time and paste them directly into the prompt. The instruction becomes "answer FROM these documents, and only from these documents." This converts a memory exam into an open-book exam.</p>
+    <p><b>Mental model:</b> think of the LLM as a brilliant analyst who just arrived on Day 1 with no company context. RAG is the briefing packet you hand them before they answer a client question. They are still doing the reasoning — you are just giving them the facts to reason from.</p>
+    <div class="mistake"><b>Common mistake:</b> thinking RAG retrains the model. It does not change the model's weights at all. RAG is literally pasting text into the prompt at runtime. The model is untouched — only the context it receives changes.</div>`},
+
+    {h:"Chunking: the decisions that matter", body:`<p>Before you can search your documents, you must split them into smaller pieces. These pieces are called <b>chunks</b>. Choosing chunk size is the single most important tuning decision in a RAG system.</p>
+    <p><b>Why you cannot embed whole documents:</b> embedding models turn text into a single fixed-length vector (a list of numbers representing meaning). If you embed an entire 50-page report, the vector is an average of every topic in that report — it is too blurry to match a specific question accurately.</p>
+    <p><b>Worked example:</b> suppose the user asks "What is the refund window for damaged items?" Your document database contains a returns chapter of a policy manual.</p>
+    <ul>
+      <li><b>100-token chunk</b> (one focused paragraph — the exact refund-for-damage policy): the embedding is dense with refund and damage vocabulary. It is a strong match for the query.</li>
+      <li><b>1,000-token chunk</b> (the whole returns chapter: refunds, exchanges, international shipping, restocking fees): the relevant sentence is diluted by 900 unrelated tokens. The embedding blurs across all those topics, so the match score is weaker and the chunk wastes most of the context window with irrelevant text.</li>
+    </ul>
+    <p><b>The tradeoff:</b> small chunks are precise but may lack surrounding context (a sentence that only makes sense in the paragraph around it). Large chunks are context-rich but produce fuzzy matches. There is no perfect size — you tune for your data.</p>
+    <p><b>Overlap:</b> if you cut every 300 tokens with no overlap, a sentence that straddles the boundary between chunk A and chunk B is split in half and lost in both. Adding 50 tokens of overlap (the last 50 tokens of chunk A are repeated as the first 50 tokens of chunk B) ensures every sentence survives in at least one complete chunk.</p>
+    <p><b>Starting point:</b> 300&ndash;500 tokens per chunk with 50 tokens of overlap. Measure retrieval quality on a golden set of questions, then tune from there.</p>
+    <div class="mistake"><b>Common mistake 1:</b> chunking by character count, which splits mid-word or mid-sentence. Always chunk on token boundaries or natural text boundaries (sentences, paragraphs).</div>
+    <div class="mistake"><b>Common mistake 2:</b> no overlap. If your question's answer spans a chunk boundary, you will never retrieve it completely.</div>`},
+
+    {h:"One query, end to end", body:`<p>Let us trace a single user query through a complete RAG system, with toy numbers so every step is concrete.</p>
+    <p><b>User question:</b> "What is the refund policy for damaged goods?"</p>
+    <p><b>Step 1 — embed the question.</b> The query is turned into a vector, just like the stored chunks were. This puts the question and the documents in the same mathematical space so they can be compared.</p>
+    <p><b>Step 2 — cosine similarity search.</b> The system compares the query vector against every stored chunk vector. Cosine similarity is a score between 0 (completely unrelated) and 1 (identical meaning). The results for four example chunks:</p>
+    <ul>
+      <li>Chunk A (refund policy paragraph): similarity 0.82</li>
+      <li>Chunk B (damaged-goods claims paragraph): similarity 0.79</li>
+      <li>Chunk C (shipping terms paragraph): similarity 0.41</li>
+      <li>Chunk D (company history paragraph): similarity 0.12</li>
+    </ul>
+    <p><b>Step 3 — retrieve top-k.</b> The system picks the top 2 chunks (A and B) and discards C and D. The threshold for "relevant" is set by you — in this case, top-2 by score.</p>
+    <p><b>Step 4 — assemble the prompt.</b> A prompt is built: system instruction + retrieved chunks + the original question. The system instruction says: "Answer ONLY from the provided context. Cite which source you used. If the answer is not in the context, say 'I don't know.'"</p>
+    <p><b>Step 5 — Claude generates the answer</b>, grounded in chunks A and B, with a citation.</p>
+    <p><b>Debugging map:</b> if something goes wrong, the step tells you where to look.</p>
+    <ul>
+      <li>Wrong chunks retrieved &rarr; the problem is in the embedding or retrieval step (step 1&ndash;2). Fix: better embedding model, hybrid search, reranker.</li>
+      <li>Right chunks retrieved but the answer ignores them &rarr; the problem is in the prompt (step 4). Fix: stronger grounding instruction ("answer ONLY from context").</li>
+      <li>"I don't know" returned when the right chunks are present &rarr; instructions are too strict. Fix: relax the grounding instruction slightly.</li>
+    </ul>`},
+
+    {h:"When RAG fails: the retrieval debugging guide", body:`<p>RAG can fail silently — Claude gives a fluent, confident answer that is just wrong. The key rule is: <b>log retrieved chunks for every query</b>. You cannot debug retrieval if you cannot see what was retrieved.</p>
+    <table>
+      <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+      <tr><td>Answer is in the corpus but wrong chunks were retrieved</td><td>Vocabulary mismatch: the query uses different words than the document (e.g. "damaged goods" in query vs "defective merchandise" in document)</td><td>Try a reranker (a second model that re-scores the top 20 candidates), rewrite the query to match document vocabulary, or add hybrid keyword search (BM25) alongside vector search</td></tr>
+      <tr><td>Correct chunks were retrieved but the answer ignores them</td><td>The prompt does not force grounding — Claude defaults to its parametric knowledge</td><td>Add "Answer ONLY from the provided context" to the system prompt and require citations</td></tr>
+      <tr><td>Answers are correct but too generic or surface-level</td><td>Chunks are too large — the relevant sentence is buried in 800 tokens of noise</td><td>Re-chunk to smaller sizes (200&ndash;300 tokens); add more overlap</td></tr>
+      <tr><td>Retrieval is slow (seconds per query)</td><td>Brute-force search across too many vectors</td><td>Switch to an approximate nearest-neighbour index (HNSW) in your vector database; reduce k (number of retrieved chunks)</td></tr>
+    </table>
+    <p><b>Golden rule:</b> when an answer is wrong, blame retrieval first, not the model. In the author's experience, 80% of RAG failures are retrieval failures — the right chunks were never given to Claude. Only 20% are generation failures where Claude had the right context but still produced a wrong answer.</p>
+    <div class="mistake"><b>Common mistake:</b> when a RAG system gives a wrong answer, immediately trying different prompt wording or a bigger model. First, log the retrieved chunks. If the right answer is not in the retrieved context, no amount of prompting will fix it.</div>`},
   ],
   quiz:[
     {type:"mcq", q:"Query with product codes → wrong chunks. Fix?", options:["Bigger model","Hybrid: vector + BM25","Larger context","Different dim"], answer:1, explain:"Embeddings blur exact strings. BM25 catches tokens. Use both."},

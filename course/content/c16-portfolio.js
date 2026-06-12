@@ -256,6 +256,53 @@ COURSE_PHASES.push(Object.assign({ order: 16 },
       <li>'Ship board' page: every project + 30s demo</li>
       <li>Mock interviews with Claude — paste JD, get grilled</li>
     </ol>`},
+
+    {h:"How to read a paper in three passes", body:`<p>Most people approach a research paper the way they would approach a novel: start at page 1 and read every word until the end. This is a mistake. Research papers are dense, highly technical, and often written to communicate with specialists — not to be enjoyable. Reading them linearly is exhausting and inefficient.</p>
+    <p>Computer scientist Srinivasan Keshav formalised a better approach called the three-pass method. Here is how to apply it to "Attention Is All You Need" by Vaswani et al. (2017) — the paper that introduced the transformer architecture behind every modern LLM.</p>
+    <h4>Pass 1 — 10 minutes, decide if it matters</h4>
+    <p>Read only: the title, abstract, introduction, section headings, figures, and conclusion. Do not read any other prose. After 10 minutes you should be able to answer: what problem does this paper address? What is the main claim? Is this relevant to what I am working on? If the answer to the last question is no, stop here. Most papers deserve only pass 1.</p>
+    <p><b>For "Attention Is All You Need":</b> the problem is that RNN-based sequence models are slow to train (sequential computation). The claim is that an architecture based entirely on attention, with no recurrence, achieves better translation quality and trains faster. This is highly relevant — stop and do pass 2.</p>
+    <h4>Pass 2 — about 1 hour, understand the contribution</h4>
+    <p>Read the introduction carefully, skim the method section, and study the results tables. Note any terms or equations you do not understand but do not stop to look them all up — mark them and keep moving. Write one paragraph summarising the paper in your own words. You are not expected to understand every detail.</p>
+    <h4>Pass 3 — half a day, only if you are implementing it</h4>
+    <p>Re-derive the key equations step by step on paper. Understand every design choice. This level of depth is only worth it if you are reproducing the paper's result or building directly on top of it.</p>
+    <p><b>For most papers, pass 1 is enough. Pass 2 when it is directly relevant. Pass 3 only when implementing.</b></p>
+    <div class="mistake"><b>Common mistake:</b> reading every paper from start to finish like a novel. Researchers burn out this way. After three dense papers in a row, motivation collapses. The three-pass method lets you process ten papers in the time a linear read takes three, and you retain more because you always know why you are reading a given section.</div>`},
+
+    {h:"Writing about your work (the README that gets you hired)", body:`<p>Your project is deployed and working. The code is in a GitHub repository. Now ask: if a recruiter has 30 seconds to decide whether to click your link or move on to the next candidate, does your README tell them what they need to know?</p>
+    <p>Most READMEs fail this test because they lead with installation instructions — the one thing a recruiter does not care about. Here is the structure that works instead.</p>
+    <h4>The five-section structure, top to bottom</h4>
+    <ol>
+      <li><b>One-sentence what-it-does.</b> No jargon. Lead with the outcome, not the technology.</li>
+      <li><b>Screenshot or demo GIF.</b> A visual above the fold. Recruiters click links; they do not read. Show the app working in 5 seconds.</li>
+      <li><b>Run it in 3 commands.</b> <code>git clone</code>, <code>pip install -r requirements.txt</code>, <code>python app.py</code>. If it takes more than 3 commands, something is too complicated.</li>
+      <li><b>How it works (one paragraph + simple diagram).</b> Describe the architecture at the level a smart non-specialist can follow. A simple ASCII diagram is fine.</li>
+      <li><b>What I would improve next.</b> A short honest list. This signals engineering judgment — you know the limits of your own work.</li>
+    </ol>
+    <h4>Before and after example</h4>
+    <p><b>Before (vague):</b> "A chatbot using AI to answer questions."</p>
+    <p><b>After (specific):</b> "Support bot that answers from YOUR company's documentation using RAG. Answers cite the exact source paragraph. Evaluated on a 200-question golden set: wrong-answer rate 4%. Deployed on Railway. Built with Claude API + Qdrant + Voyage embeddings."</p>
+    <p>The "after" version has three qualities: (1) specific outcome, (2) a real number from an evaluation, (3) the technology stack. These are the details that tell a hiring manager this person built something real, not just followed a tutorial.</p>
+    <div class="mistake"><b>Common mistake 1:</b> README that is nothing but installation notes. That is a developer convenience file, not a portfolio piece. Add the screenshot, the one-liner, and the deployed link before anything else.</div>
+    <div class="mistake"><b>Common mistake 2:</b> no deployed link. "Works on my machine" is not a portfolio piece. Railway's hobby plan is $5 per month. Deploy the app and put the live URL at the top of the README. A link that loads in 3 seconds is worth more than ten paragraphs of description.</div>`},
+
+    {h:"The portfolio that beats a resume", body:`<p>A list of completed courses on a resume tells a hiring manager you can follow instructions. A deployed project tells them you can build things. This lesson explains how to turn the work you have done in this course into the three deep projects that open doors.</p>
+    <h4>Quality beats quantity: 3 deep projects beat 12 shallow ones</h4>
+    <p>Depth signals real skill. A todo-list clone signals tutorial-following. Every junior candidate has tutorial clones. What distinguishes candidates who get interviews are projects that required solving real problems that the tutorial did not cover.</p>
+    <p>Each deep project needs three things:</p>
+    <ol>
+      <li><b>A deployed link that works.</b> Not localhost. Not a screenshot of localhost. A URL that loads in under 5 seconds, from anywhere, at any time. Railway is the default deploy target from this course — use it.</li>
+      <li><b>A README per the previous lesson.</b> One-liner, screenshot, 3-command setup, how it works, what you would improve.</li>
+      <li><b>One honest write-up of a real problem you hit and how you debugged it.</b> This is what every technical interview asks about. "Tell me about a time something went wrong and how you fixed it." If you have a written account in your README or a blog post, you have a rehearsed answer.</li>
+    </ol>
+    <h4>Your three deep projects from this course</h4>
+    <ul>
+      <li><b>Phase 9 Claude API app:</b> a deployed app that calls the Claude API and does something useful. RAG chatbot, support bot, document summariser — pick whichever you built. This demonstrates API integration, prompt engineering, and deployment.</li>
+      <li><b>Phase 10 RAG system:</b> a deployed app with retrieval over real documents, with measured retrieval quality (recall@5 on a golden set). This demonstrates the full RAG pipeline: chunking, embedding, retrieval, grounding.</li>
+      <li><b>Phase 11 agent:</b> a deployed agent with at least one real tool, a guardrail, and an audit log. This demonstrates you understand agentic patterns and their failure modes.</li>
+    </ul>
+    <p><b>The differentiator:</b> Phase 7's small LLM reproduction (GPT-2 from scratch). Almost no junior candidate has done this. It signals you understand what is happening inside the model, not just how to call an API.</p>
+    <div class="mistake"><b>Common mistake:</b> starting project number 4 instead of polishing projects 1 through 3 to deployed-and-documented status. More projects at 50% polish is worse than three projects at 100% polish. Recruiters click the first link and judge in 30 seconds. If that link does not work, they move on — regardless of how many other projects are listed below it.</div>`},
   ],
   quiz:[
     {type:"mcq", q:"Most leveraged artifact for AI eng job?", options:["Resume","Live deployed project, public source, 60s demo","Coursera cert","Skills list"], answer:1, explain:"Hiring managers click links. Working app + repo gets screens. Certs = noise."},

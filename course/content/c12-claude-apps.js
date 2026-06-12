@@ -650,6 +650,165 @@ curl -X POST https://yourapp.up.railway.app/ask \\
       <li>Quality ceiling from prompt + RAG + tools already met → only then fine-tune</li>
       <li>Latency-critical with small model needed → fine-tune small open model</li>
     </ul>`},
+    {h:"Anatomy of a messages.create call — every field", body:`<p>Every time your Python code calls the Claude API, you fill in a short list of fields. This lesson explains what each field does so you never have to guess.</p>
+    <table>
+      <tr><th>Field</th><th>What it does</th><th>When to change it</th></tr>
+      <tr><td><code>model</code></td><td>Which Claude brain to use. Different models = different quality, speed, and cost. Pick the smallest model that does the job well enough.</td><td>Start with <code>claude-sonnet-4-6</code> (the workhorse). Upgrade to <code>claude-opus-4-8</code> for the hardest reasoning; downgrade to <code>claude-haiku-4-5-20251001</code> for bulk/cheap tasks.</td></tr>
+      <tr><td><code>max_tokens</code></td><td>A hard ceiling on how many tokens Claude can write in its reply. <b>This is also your cost cap</b> — you are billed for every output token generated.</td><td>Set it tightly. If your use case needs short answers, cap at 256 or 512. A very high cap means a runaway prompt can generate an enormous (expensive) wall of text.</td></tr>
+      <tr><td><code>system</code></td><td>Standing instructions that apply to the entire conversation: the role Claude should play, the format it must follow, and rules it must obey.</td><td>Write it once per conversation, keep it stable. Changing it every call defeats prompt caching and costs more.</td></tr>
+      <tr><td><code>messages</code></td><td>The conversation history — a list of <code>&#123;"role": ..., "content": ...&#125;</code> objects. Roles always alternate: <code>user</code> then <code>assistant</code> then <code>user</code>, etc.</td><td>For a single question, one user message is enough. For multi-turn chat, append each new turn to the list.</td></tr>
+      <tr><td><code>temperature</code></td><td>Controls how "adventurous" Claude is when choosing the next word. <code>0</code> = always pick the single most likely word (focused, repeatable). <code>1</code> = sample according to probability (more varied). Default is 1.</td><td>Use <code>0</code> for structured outputs like JSON, code, or whenever you need the same answer every time. Use <code>0.7</code>&ndash;<code>1.0</code> for creative writing or brainstorming.</td></tr>
+      <tr><td><code>stop_sequences</code></td><td>A list of strings. If Claude outputs one of them, generation halts immediately — that string is not included in the response.</td><td>Useful in agent loops where you want Claude to stop at a specific marker, e.g. <code>["END"]</code>.</td></tr>
+    </table>
+    <p><b>Mental model:</b> think of <code>system</code> as the employee handbook, <code>messages</code> as today's conversation, <code>model</code> as which employee you hired, and <code>max_tokens</code> as the maximum number of words on the invoice.</p>
+    <div class="mistake"><b>Common mistake:</b> setting <code>max_tokens</code> too low. Symptoms: the reply ends mid-sentence. How to spot it: check <code>resp.stop_reason</code> in the response. If it says <code>"max_tokens"</code> instead of <code>"end_turn"</code>, Claude was cut off before finishing. Raise the cap or instruct Claude to be more concise.</div>`,
+    code:`import anthropic
+client = anthropic.Anthropic()
+
+resp = client.messages.create(
+    model="claude-sonnet-4-6",  # verify current IDs at docs.anthropic.com
+    max_tokens=512,             # hard cap — raises error if too low for the reply
+    system="You are a helpful support agent for a software company.",
+    messages=[{"role": "user", "content": "How do I reset my password?"}],
+    temperature=0,              # 0 = repeatable, good for support answers
+    stop_sequences=["END"],     # halt if Claude writes this marker
+)
+
+print(resp.content[0].text)
+print("Stop reason:", resp.stop_reason)  # "end_turn" is good; "max_tokens" means it was cut off`},
+
+    {h:"System prompts that actually work", body:`<p>The system prompt is your one chance to define who Claude is and what rules it must follow. Vague prompts produce inconsistent results. This lesson shows four patterns that actually work, each with a before and after.</p>
+    <h4>Pattern 1: Role assignment</h4>
+    <p>Give Claude a specific job title and employer, not just a mood.</p>
+    <ul>
+      <li><b>Before:</b> "Be a helpful assistant."</li>
+      <li><b>After:</b> "You are a customer-support agent for Acme Software. You help users with billing, account access, and plan upgrades. You do not give technical debugging help."</li>
+    </ul>
+    <p>The "after" version tells Claude exactly what role to play and what is out of scope.</p>
+    <h4>Pattern 2: Output format contract</h4>
+    <p>Specify the exact shape of the output, including an example.</p>
+    <ul>
+      <li><b>Before:</b> "Answer in JSON."</li>
+      <li><b>After:</b> "Reply with ONLY valid JSON matching this shape: <code>&#123;"status": "resolved"|"escalate", "summary": "...", "ticket_id": null&#125;</code>. No other text outside the JSON object."</li>
+    </ul>
+    <h4>Pattern 3: Refusal rules</h4>
+    <p>Tell Claude exactly what to say when it cannot help, rather than leaving it to improvise.</p>
+    <ul>
+      <li><b>Before:</b> "Only answer billing questions."</li>
+      <li><b>After:</b> "If the user's question is not about billing or account charges, reply with exactly: 'I can only assist with billing questions. Please contact our technical team at support@example.com.'"</li>
+    </ul>
+    <h4>Pattern 4: Few-shot examples in the system prompt</h4>
+    <p>A few concrete input&rarr;output examples teach Claude the desired style faster than paragraphs of description.</p>
+    <ul>
+      <li><b>Before:</b> "Be concise, accurate, and professional."</li>
+      <li><b>After:</b> Include 2&ndash;3 example exchanges showing exactly what concise, accurate, and professional looks like for your specific task.</li>
+    </ul>
+    <div class="mistake"><b>Common mistake 1:</b> writing novel-length system prompts. When the prompt is 3,000 words long, the actual instruction gets buried. Claude's attention is finite. Keep system prompts under 500 words where possible; move examples into the messages array instead.</div>
+    <div class="mistake"><b>Common mistake 2:</b> using vague adjectives as instructions. "Be concise, accurate, and professional" is not a testable rule &mdash; Claude already tries to be those things. Replace adjectives with measurable rules: "Limit replies to 3 sentences. Always cite a source. Never use first person."</div>`},
+
+    {h:"Streaming: why and how", body:`<p>Imagine you order a meal at a restaurant. Would you rather wait 8 minutes in silence, then have the entire plate appear all at once? Or would you prefer the waiter to bring each dish as it is ready?</p>
+    <p>Streaming works the same way for Claude. Without streaming, your app waits until Claude finishes the entire response — then shows it all at once. This can feel broken even if the total time is 8 seconds. With streaming, Claude sends each word or phrase as it generates it, so the first words appear on screen in under a second. The <b>total time is identical</b>, but the <b>perceived speed</b> is much faster.</p>
+    <p><b>How it works under the hood:</b> when you set <code>stream=True</code>, the Anthropic server sends small packets of text (called "deltas") over an open connection as Claude generates them. Your code reads each delta and displays it immediately, rather than buffering the whole response.</p>
+    <p>The Python SDK gives you a clean way to read these deltas one by one using a context manager (the <code>with</code> block below). The <code>stream.text_stream</code> property is a Python generator that yields each piece of text as it arrives.</p>
+    <div class="mistake"><b>Common mistake:</b> forgetting <code>flush=True</code> inside the loop. By default, Python's <code>print()</code> buffers output and only writes it to the terminal when the buffer fills up or the program ends. With <code>flush=True</code>, each piece of text is forced out immediately. Without it, you will see nothing print until the very end &mdash; defeating the entire point of streaming.</div>`,
+    code:`import anthropic
+client = anthropic.Anthropic()
+
+# The "with" block opens a streaming connection.
+# It closes automatically when the block ends.
+with client.messages.stream(
+    model="claude-sonnet-4-6",
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Tell me a short story about a robot."}],
+) as stream:
+    # stream.text_stream yields one small piece of text at a time.
+    for text in stream.text_stream:
+        # end="" prevents print() adding a newline after every chunk.
+        # flush=True forces the text to appear on screen immediately.
+        print(text, end="", flush=True)
+
+# After the loop, print a final newline so the terminal prompt
+# appears on its own line.
+print()`},
+
+    {h:"Tool use, traced step by step", body:`<p><b>Mental model first:</b> Claude is a brilliant advisor who has no hands. It can think, plan, and decide — but it cannot actually press buttons, read files, or call APIs. That is your job. Tool use is how Claude asks you to press the buttons on its behalf.</p>
+    <p>Here is the complete round-trip, step by step:</p>
+    <ol>
+      <li><b>You define the tools</b> and send them along with the user's question. A tool definition has a name, a description (written for Claude, explaining when to use it), and a JSON schema describing the input arguments.</li>
+      <li><b>Claude decides</b> whether to use a tool. If it does, the response comes back with <code>stop_reason = "tool_use"</code> and a <code>tool_use</code> content block containing the tool name and the arguments Claude chose.</li>
+      <li><b>Your code runs the actual function.</b> Claude never executes anything. It just tells you what it wants run and with what arguments.</li>
+      <li><b>You send the result back</b> as a <code>tool_result</code> message. This is a new turn in the conversation where you report what the function returned.</li>
+      <li><b>Claude writes the final answer</b> using the result you gave it, and returns <code>stop_reason = "end_turn"</code>.</li>
+    </ol>
+    <div class="mistake"><b>Common mistake 1:</b> thinking the model runs code itself. It does not. Claude can only produce text — including text that looks like a tool call. Your code is always the executor.</div>
+    <div class="mistake"><b>Common mistake 2:</b> not handling the case where Claude chooses NOT to use the tool. Sometimes Claude answers directly without calling any tool. Always check <code>stop_reason</code> before assuming a tool call happened.</div>`,
+    code:`# Step 1 — define the tool (this is JSON that describes the function to Claude)
+tools = [{
+    "name": "get_weather",
+    "description": "Returns the current weather for a city. Use this when the user asks about weather.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "city": {"type": "string", "description": "City name, e.g. Tokyo"}
+        },
+        "required": ["city"]
+    }
+}]
+
+import anthropic
+client = anthropic.Anthropic()
+
+# Step 2 — send the question + tool definitions
+resp = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{"role": "user", "content": "What is the weather in Tokyo?"}],
+)
+
+# Step 2 result — Claude responds with stop_reason "tool_use"
+# resp.content contains a tool_use block like:
+# {"type": "tool_use", "id": "tu_abc", "name": "get_weather", "input": {"city": "Tokyo"}}
+
+# Step 3 — YOUR code runs the real function (not Claude!)
+def get_weather(city):
+    return "Sunny, 22 degrees Celsius"  # in reality, call a weather API here
+
+tool_block = next(b for b in resp.content if b.type == "tool_use")
+result = get_weather(tool_block.input["city"])
+
+# Step 4 — send the result back to Claude as a tool_result message
+followup = client.messages.create(
+    model="claude-sonnet-4-6",
+    max_tokens=1024,
+    tools=tools,
+    messages=[
+        {"role": "user", "content": "What is the weather in Tokyo?"},
+        {"role": "assistant", "content": resp.content},   # Claude's tool request
+        {"role": "user", "content": [{                    # your result
+            "type": "tool_result",
+            "tool_use_id": tool_block.id,
+            "content": result
+        }]},
+    ],
+)
+
+# Step 5 — Claude writes the final natural-language answer
+print(followup.content[0].text)
+# e.g. "The current weather in Tokyo is sunny with a temperature of 22 degrees Celsius."`},
+
+    {h:"Cost control: caching, model choice, max_tokens", body:`<p>LLM apps have a unique failure mode: they can die by bill, not by crash. The code keeps running while costs quietly compound. This lesson covers three levers you can pull, in order of impact.</p>
+    <h4>Lever 1: Model choice (biggest impact)</h4>
+    <p>Not every question needs the most powerful model. If a simpler model handles 90% of your questions just as well, use it for those 90%.</p>
+    <p><b>Worked example:</b> imagine a support bot that answers 1,000 questions per day. Haiku is roughly an order of magnitude cheaper than Sonnet. If Haiku handles easy questions (refund policy, opening hours) at equivalent quality, and you route only the hard edge cases to Sonnet, you could cut your daily LLM cost by 80&ndash;90% compared to running everything through Sonnet. This pattern is called <b>model routing</b>.</p>
+    <p>Verify current relative pricing at <a href="https://docs.anthropic.com" target="_blank">docs.anthropic.com</a> before making routing decisions — prices change.</p>
+    <h4>Lever 2: Prompt caching</h4>
+    <p>Many apps send the same large system prompt with every request (for example, a 10-page company policy document). Without caching, you pay full price for those tokens every single time. With <b>prompt caching</b>, you pay full price once to store the prompt in Anthropic's cache, and subsequent calls that hit the cache cost a fraction of the normal price.</p>
+    <p>The break-even: if you send the same large prefix many times per day, caching pays for itself almost immediately. It is most valuable for stable content (policy docs, large system instructions) that rarely changes.</p>
+    <h4>Lever 3: max_tokens + concise-output instructions</h4>
+    <p>Output tokens are more expensive than input tokens. Two habits help: (1) set <code>max_tokens</code> tightly for your use case; (2) tell Claude explicitly to be brief: "Reply in 2 sentences or fewer." Both caps the expensive output side of the bill.</p>
+    <p><b>Always:</b> set a monthly spend limit in the Anthropic console (Settings &rarr; Limits) before running anything at scale. This is your safety net.</p>
+    <div class="mistake"><b>Common mistake:</b> defaulting to the largest model for everything because "it's the best." For most routine tasks, a smaller model is indistinguishable in quality and dramatically cheaper. Always measure quality on your actual use case before choosing a model tier.</div>`},
   ],
   quiz:[
     {type:"mcq", q:"5000-token system prompt unchanging — best cost cut?", options:["Streaming","Prompt caching cache_control","Extended thinking","Tool use"], answer:1, explain:"Cached input ~10% normal price → ~90% savings on every call after first."},

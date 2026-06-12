@@ -112,6 +112,81 @@ chmod 600 file   # rw- --- --- (owner only — use for API keys, SSH keys)
   --num-speculative-tokens 4 \\
   --dtype bfloat16
 </code></pre>`},
+    {h:"Dev vs prod: what changes when real people show up", body:`<p>Code that works perfectly on your laptop can fail in completely different ways the moment real users start using it. This lesson maps the exact differences so you are not surprised.</p>
+    <table>
+      <tr><th>Concern</th><th>During development</th><th>In production</th></tr>
+      <tr><td><b>Secrets</b></td><td><code>ANTHROPIC_API_KEY</code> lives in a <code>.env</code> file on your laptop</td><td>Secret must live in Railway's dashboard Variables panel — never in the repository. Anyone who reads your public repo can steal a committed API key.</td></tr>
+      <tr><td><b>Errors</b></td><td>You read the full Python traceback and fix it</td><td>Users see a blank screen or a generic "500 Internal Server Error." You need structured logs that record the full error with timestamps so you can diagnose it after the fact.</td></tr>
+      <tr><td><b>Scale</b></td><td>One user (you)</td><td>Traffic spikes — 50 users hit the endpoint simultaneously at lunch. Does it queue gracefully or crash?</td></tr>
+      <tr><td><b>Logging</b></td><td><code>print()</code> statements show output in your terminal</td><td><code>print()</code> still works but you need structured logs (JSON lines with timestamps, request IDs, severity levels) so you can filter and search Railway's log stream later.</td></tr>
+      <tr><td><b>Updates</b></td><td>Save the file, run the script again</td><td>Deploy = push to GitHub &rarr; Railway rebuilds &rarr; new version goes live. You need a rollback plan if the new version is broken.</td></tr>
+    </table>
+    <p><b>The "works on my machine" autopsy:</b> most production failures that worked in development trace back to one of three causes: (1) <b>version drift</b> — your laptop has a different library version than the server; (2) <b>missing environment variable</b> — you forgot to add the variable to Railway's dashboard; (3) <b>path differences</b> — a file path that works on Windows (<code>C:\\Users\\you\\data.txt</code>) breaks on Linux (<code>/app/data.txt</code>). Docker containers (next lesson) kill all three of these bugs.</p>
+    <div class="mistake"><b>Common mistake:</b> testing only the happy path before deploying. The happy path is one request with a clean, well-formed input. Production users will send empty strings, extremely long inputs, special characters, requests in unexpected languages, and requests at 3 AM when you are asleep. Test your error handling before you deploy, not after your first crash report.</div>`},
+
+    {h:"Docker mental model: a shipping container for code", body:`<p>Before Docker existed, deploying software was like describing a recipe over the phone: "Install Python 3.10, then install these libraries, make sure the timezone is set to UTC, oh and you need this system library too..." Something always went wrong on the other end.</p>
+    <p>Docker solves this with a simple idea borrowed from shipping: instead of describing what to install, you ship a sealed container that already has everything inside.</p>
+    <p><b>Three vocabulary words:</b></p>
+    <ul>
+      <li><b>Image:</b> a frozen, read-only box containing your app + exact Python version + exact library versions. Built once, runs anywhere.</li>
+      <li><b>Container:</b> a running copy of an image. You can run ten containers from the same image simultaneously.</li>
+      <li><b>Dockerfile:</b> a recipe (a text file) that tells Docker how to build the image, step by step.</li>
+    </ul>
+    <p>The same image runs identically on your Windows laptop (via Docker Desktop), Railway's Linux servers, and a RunPod GPU pod. That is the entire value proposition.</p>
+    <p><b>Note for Railway users:</b> Railway reads your <code>requirements.txt</code> and builds a container automatically from your GitHub repo. You often do not need to write a Dockerfile. You will need one when you want to control the exact base image, add system packages, or customise the build process.</p>
+    <div class="mistake"><b>Common mistake:</b> putting the <code>COPY . .</code> line before the <code>RUN pip install</code> line in the Dockerfile. Docker caches each line. If your code changes but your requirements have not, Docker can reuse the cached pip install layer — saving 60 seconds on every rebuild. If you copy all your code first, a change to any file invalidates the cache and forces a full reinstall every time.</div>`,
+    code:`# Dockerfile — a recipe for building a container image
+# Each line creates one layer. Layers are cached.
+
+# Start from an official slim Python image (smaller = faster to pull and run)
+FROM python:3.12-slim
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the requirements file FIRST (so pip install is cached separately from your code)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Now copy the rest of your code (changes here do NOT bust the pip cache)
+COPY . .
+
+# The command to run when the container starts
+CMD ["python", "app.py"]`},
+
+    {h:"Monitoring an LLM app: the four numbers", body:`<p>Classic server monitoring tracks CPU usage, memory, and disk. Those numbers matter for any server — but LLM apps have failure modes that CPU graphs will never reveal. This lesson covers the four numbers that matter specifically for an LLM-backed service.</p>
+    <h4>Number 1: Latency p95</h4>
+    <p>Do not use average latency — it hides the worst user experience. Instead, use the <b>95th percentile</b> (p95): the slowest 5% of requests.</p>
+    <p><b>Worked example:</b> suppose you have 10 requests. Nine complete in 0.5 seconds and one takes 9 seconds. The average is (9 &times; 0.5 + 9) &divide; 10 = 13.5 &divide; 10 = 1.35 seconds. That sounds acceptable. But your p95 is approximately 9 seconds — one in twenty users is waiting nearly 10 seconds. That is a broken experience that the average completely obscures.</p>
+    <h4>Number 2: Error rate</h4>
+    <p>Count HTTP 5xx errors and API failures per hour. A sudden spike means something broke. Alert when error rate exceeds 1%.</p>
+    <h4>Number 3: Token spend per day</h4>
+    <p><b>LLM apps die by bill, not by crash.</b> A bug that doubles your token usage doubles your monthly cost and the app keeps running happily — no alarm fires. You only notice it when the invoice arrives. Log <code>input_tokens</code> and <code>output_tokens</code> from every <code>resp.usage</code> object, sum them daily, and alert when daily spend exceeds a threshold.</p>
+    <h4>Number 4: Output quality sample</h4>
+    <p>LLMs fail <b>silently</b> — they produce fluent, confident, grammatically correct text that is simply wrong. No exception is thrown. No error rate spikes. The only way to catch this is to read actual outputs. Log every input and output. Once a week, read 10 randomly selected ones. You will catch quality degradation that no automated metric catches.</p>
+    <p><b>Cheapest viable monitoring stack:</b> structured JSON logs (use Python's <code>logging</code> module with a JSON formatter) + a daily SQL query summing token spend + a weekly manual review of 10 random conversations. This costs nothing and catches the important failures.</p>
+    <div class="mistake"><b>Common mistake:</b> setting up CPU and memory dashboards and nothing else. For a Claude API app, the server will never run out of CPU — all the heavy computation happens on Anthropic's servers. The risks specific to LLM apps are cost surprises and silent quality failures, neither of which CPU graphs reveal.</div>`},
+
+    {h:"GPU serving notes: vLLM on RunPod", body:`<p>This lesson applies to Phase 12, where you will deploy a small open-source model on a rented GPU rather than calling the Claude API. If you are using the Claude API for everything, you can read this as background knowledge for now.</p>
+    <p><b>What vLLM is:</b> vLLM is an open-source inference server. You point it at a model, and it exposes an HTTP API that your Python code calls — similar to how you call the Claude API, except the model is running on your rented GPU.</p>
+    <p><b>Why vLLM is fast (two superpowers):</b></p>
+    <ul>
+      <li><b>Continuous batching:</b> when multiple users send requests at the same time, a naive server waits for the current batch to finish before starting new requests. vLLM allows new requests to join the running batch mid-flight. The GPU stays busy almost continuously instead of sitting idle between batches.</li>
+      <li><b>PagedAttention:</b> LLMs need to store the "attention cache" (a record of everything said so far in the conversation) in GPU memory. Normally this is one large contiguous block — wasteful and inflexible. vLLM slices the cache into pages, like an operating system manages RAM. This allows more simultaneous users to share the same GPU memory.</li>
+    </ul>
+    <p><b>Deployment flow on RunPod:</b></p>
+    <ol>
+      <li>Rent a GPU pod on RunPod (A100 40 GB or similar, depending on model size)</li>
+      <li>The pod starts with a Linux environment. Download the model weights from HuggingFace.</li>
+      <li>Start vLLM: <code>python -m vllm.entrypoints.openai.api_server --model your-model-name</code></li>
+      <li>vLLM exposes an OpenAI-compatible HTTP endpoint at <code>http://localhost:8000</code></li>
+      <li>Point your Python client at that URL instead of the Anthropic API URL</li>
+    </ol>
+    <p><b>Cost shape (relative — verify current RunPod pricing before renting):</b> RunPod charges per <b>hour</b> whether or not you are sending requests. The Claude API charges per <b>token</b> regardless of time. Self-hosting on RunPod only becomes cheaper than the Claude API when you have high, steady traffic that keeps the GPU busy. For a learning project with light traffic, you will almost certainly spend more on RunPod than on Claude API tokens.</p>
+    <div class="mistake"><b>Common mistake:</b> leaving a GPU pod running when you are done for the day. A GPU pod left running overnight can cost $30&ndash;$50 before you notice. Always stop or terminate the pod when you finish a session. This is the expensive lesson almost every self-hosting beginner learns exactly once.</div>`},
+
     {h:"Quantization (GPTQ / AWQ / GGUF / NF4)", body:`<p>Weights default to bf16 (2 bytes each). A 70B model = 140GB. Doesn't fit on a 24GB GPU. Quantization shrinks weights to lower precision, trading minor quality loss for huge memory savings.</p>
     <h4>Format comparison</h4>
     <table>
