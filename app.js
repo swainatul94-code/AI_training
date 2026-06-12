@@ -4010,7 +4010,7 @@ window.logActivity = logActivity;
       ctx.strokeStyle = 'rgba(122,162,255,.5)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(W/2-220, 280); ctx.lineTo(W/2+220, 280); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = '20px Inter,sans-serif';
-      ctx.fillText('has completed ' + done + ' of 14 phases in the', W/2, 330);
+      ctx.fillText('has completed ' + done + ' of 16 phases in the', W/2, 330);
       ctx.fillText('AI Zero → Hero Engineering track.', W/2, 360);
       // big number
       ctx.font = '900 140px Space Grotesk,sans-serif';
@@ -4037,7 +4037,7 @@ window.logActivity = logActivity;
       ctx.font = '900 120px Space Grotesk,sans-serif';
       ctx.fillText(pct + '% complete', 80, 340);
       ctx.fillStyle = '#fff'; ctx.font = '700 38px Space Grotesk,sans-serif';
-      ctx.fillText(done + ' of 14 phases shipped', 80, 410);
+      ctx.fillText(done + ' of 16 phases shipped', 80, 410);
       ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.font = '24px Inter,sans-serif';
       ctx.fillText('Built nanoGPT, fine-tuned with DPO, shipped agents.', 80, 460);
       ctx.fillText('— ' + nm, 80, 510);
@@ -4067,7 +4067,7 @@ window.logActivity = logActivity;
     const pct = (typeof pctComplete === 'function') ? pctComplete() : 0;
     const done = Object.keys((PROG && PROG.done) || {}).length;
     const nm = name.value.trim() || 'a learner';
-    const txt = `I'm ${pct}% through AI Zero → Hero (${done}/14 phases). Building real LLMs from scratch.\n\nFree, animated, interactive: swainatul94-code.github.io/AI_training\n\n— ${nm}`;
+    const txt = `I'm ${pct}% through AI Zero → Hero (${done}/16 phases). Building real LLMs from scratch.\n\nFree, animated, interactive: swainatul94-code.github.io/AI_training\n\n— ${nm}`;
     navigator.clipboard.writeText(txt).then(() => {
       const b = document.getElementById('certCopy');
       const orig = b.textContent;
@@ -4135,7 +4135,7 @@ window.logActivity = logActivity;
   if (document.body.classList.contains('mode-lesson')) return;
   try { if (localStorage.getItem(TOUR_KEY)) return; } catch {}
   const steps = [
-    {h:'Welcome 👋', b:'Zero-to-Hero AI in 14 phases. Skim the roadmap below — each phase is a click away. ~30 weeks, 10–20 hrs/week.'},
+    {h:'Welcome 👋', b:'Zero-to-Hero AI in 16 phases. Skim the roadmap below — each phase is a click away. ~30 weeks, 10–20 hrs/week.'},
     {h:'Press ⌘K (Ctrl+K) anytime', b:'Search across <b>every</b> phase, glossary term, paper, resource, and demo. Type <code>"RoPE"</code>, <code>"prompt caching"</code>, or <code>"agent"</code> and jump straight there.'},
     {h:'Play with the math', b:'Click any phase → <b>"Open lesson ↗"</b>. Inside: a multi-section modal with story, a real interactive game, code you can copy, mini-quiz, and 5+ curated free deep-dives.'},
     {h:'Use <kbd>j</kbd> <kbd>k</kbd> to navigate', b:'<kbd>j</kbd>/<kbd>k</kbd> moves between phase cards. <kbd>/</kbd> focuses search. <kbd>?</kbd> shows this tour again. Lots of shortcuts. You\'re ready — go.'},
