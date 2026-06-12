@@ -192,7 +192,7 @@ print(x)                    # None — not 7!`},
 <tr><td><code>"transformer"[-1]</code></td><td>Last character (negative counts from end)</td><td><code>'r'</code></td></tr>
 <tr><td><code>"transformer"[0:5]</code></td><td>Positions 0, 1, 2, 3, 4 — NOT 5</td><td><code>'trans'</code></td></tr>
 <tr><td><code>"transformer"[5:]</code></td><td>Position 5 to the end</td><td><code>'former'</code></td></tr>
-<tr><td><code>"transformer"[::2]</code></td><td>Every 2nd character (step=2)</td><td><code>'tnfre'</code></td></tr>
+<tr><td><code>"transformer"[::2]</code></td><td>Every 2nd character (step=2)</td><td><code>'tasomr'</code></td></tr>
 </table>
 <p><b>The off-by-one rule (memorise this):</b> <code>[0:5]</code> gives you positions 0, 1, 2, 3, 4 — that's 5 characters, but the stop index (5) is excluded. Think of it as "start at 0, stop before 5."</p>
 <p><b>Common novice mistakes:</b></p>
@@ -222,7 +222,7 @@ print(word[0])      # t      — position 0
 print(word[-1])     # r      — last character
 print(word[0:5])    # trans  — positions 0,1,2,3,4 (stop=5 excluded)
 print(word[5:])     # former — position 5 to end
-print(word[::2])    # tnfre  — every 2nd character
+print(word[::2])    # tasomr — every 2nd character (positions 0,2,4,6,8,10)
 
 # Slicing a list works the same way
 nums = [10, 20, 30, 40, 50]
