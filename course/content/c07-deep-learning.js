@@ -186,6 +186,101 @@ for epoch in range(10):
       <li>LoRA / QLoRA — Phase 8 covers it</li>
       <li>RAG / agents / production — Phases 10-12</li>
     </ul>`},
+    {h:"A neuron is a weighted vote", body:`<p><b>Mental model:</b> picture a club bouncer who decides whether to let a guest in. They score the guest on several criteria — how well dressed, how well known, how early in the night — and each criterion has a different importance weight. They add up the weighted scores, add a personal grumpiness offset (the bias), and if the total clears their threshold they open the rope.</p>
+    <p>A neuron does the same thing with numbers. It takes a list of inputs, multiplies each by a weight, adds a bias, then passes the result through an <b>activation function</b> that decides whether the neuron "fires."</p>
+    <p><b>Worked example:</b> inputs = [2, 3], weights = [0.5, &minus;1], bias = 1.</p>
+    <ul>
+      <li>Weighted sum: (2 &times; 0.5) + (3 &times; (&minus;1)) + 1 = 1 &minus; 3 + 1 = &minus;1</li>
+      <li>ReLU activation: max(0, &minus;1) = 0 — the neuron stays silent.</li>
+    </ul>
+    <p>Now change the second weight from &minus;1 to +1:</p>
+    <ul>
+      <li>Weighted sum: (2 &times; 0.5) + (3 &times; 1) + 1 = 1 + 3 + 1 = 5</li>
+      <li>ReLU(5) = 5 — the neuron fires strongly.</li>
+    </ul>
+    <p>Training adjusts the weights and bias so that the right neurons fire for the right inputs. That is all that learning is at this level.</p>
+    <p><b>Common novice mistakes:</b></p>
+    <ul>
+      <li>Thinking of neurons as brain cells that "understand" — they are just weighted sums followed by a simple math function.</li>
+      <li>Forgetting the bias term — without it the neuron cannot fire unless the weighted sum is already positive.</li>
+    </ul>`},
+    {h:"Why layers? Composition builds concepts", body:`<p><b>Mental model:</b> a single employee can only do one job. Stack specialists — each building on the previous person's output — and you can build cathedrals.</p>
+    <p>A single layer of neurons can only draw straight-line boundaries in the input space. But stacking layers lets each layer build on top of what the previous layer detected.</p>
+    <p><b>Concrete image-recognition chain:</b></p>
+    <ul>
+      <li>Layer 1 learns to detect edges — bright-to-dark transitions at various angles.</li>
+      <li>Layer 2 combines edges into shapes — corners, curves, circles.</li>
+      <li>Layer 3 combines shapes into recognizable objects — an eye, a wheel, a nose.</li>
+    </ul>
+    <p>Language models follow the same logic: characters &rarr; word fragments &rarr; grammar patterns &rarr; meaning.</p>
+    <p><b>The XOR proof that depth matters:</b> the XOR function outputs 1 when inputs differ (0 XOR 1 = 1, 1 XOR 0 = 1) and 0 when they match (0 XOR 0 = 0, 1 XOR 1 = 0). A single layer of neurons literally cannot learn this — the data is not linearly separable. Adding one hidden layer solves it trivially. This was a historically important result that proved depth is not optional for many real problems.</p>
+    <p><b>Common novice mistakes:</b></p>
+    <ul>
+      <li>Adding more neurons to one wide layer instead of adding depth — depth and width are not interchangeable.</li>
+      <li>Assuming "more layers is always better" — very deep nets need residual connections to train at all.</li>
+    </ul>`},
+    {h:"Backprop with three numbers, end to end", body:`<p><b>Mental model:</b> training a model is like tuning a dial on a radio. You listen (forward pass), check how far off the station you are (loss), then decide which direction to turn the dial and by how much (gradient), then actually turn it (weight update). Repeat until the music is clear.</p>
+    <p>Backpropagation is the mathematical procedure for computing "which direction and how much" for every dial (weight) in the network simultaneously.</p>
+    <p><b>Worked example — the simplest possible network:</b> one weight, no activation, one sample.</p>
+    <ul>
+      <li>Input x = 2, weight w = 0.5, target y = 3.</li>
+      <li><b>Forward pass:</b> prediction = w &times; x = 0.5 &times; 2 = 1.0</li>
+      <li><b>Loss (MSE):</b> (prediction &minus; target)&sup2; = (1.0 &minus; 3)&sup2; = (&minus;2)&sup2; = 4</li>
+      <li><b>Gradient:</b> how much does the loss change if we nudge w slightly? By the chain rule: dLoss/dw = 2 &times; (prediction &minus; target) &times; x = 2 &times; (&minus;2) &times; 2 = &minus;8</li>
+      <li><b>Update</b> (learning rate = 0.1): w<sub>new</sub> = 0.5 &minus; 0.1 &times; (&minus;8) = 0.5 + 0.8 = 1.3</li>
+    </ul>
+    <p><b>Second forward pass to verify:</b> prediction = 1.3 &times; 2 = 2.6. Loss = (2.6 &minus; 3)&sup2; = (&minus;0.4)&sup2; = 0.16.</p>
+    <p>Loss fell from 4 to 0.16 in one step. Keep repeating and the prediction approaches 3.</p>
+    <p>Scale this to a network with billions of weights, apply the chain rule automatically across every layer, and that is exactly how every LLM trains. The math is the same; only the scale differs.</p>`, code:`# Plain Python backprop — no libraries
+# 1-neuron net: pred = w * x  (no bias, no activation for clarity)
+
+x = 2.0
+target = 3.0
+w = 0.5
+lr = 0.1
+
+for step in range(5):
+    pred = w * x                          # forward pass
+    loss = (pred - target) ** 2           # MSE loss
+    grad = 2 * (pred - target) * x        # dLoss/dw (chain rule)
+    w = w - lr * grad                     # gradient descent update
+    print(f"step {step}  w={w:.4f}  pred={w*x:.4f}  loss={loss:.4f}")`},
+    {h:"The training loop, line by line", body:`<p>Every PyTorch training run — from a tiny toy net to a billion-parameter LLM — uses the same eight-line loop. Memorize its shape once and you can read any training script ever written.</p>
+    <p><b>The loop does one full pass over the dataset (one <em>epoch</em>), broken into small batches:</b></p>
+    <p>See the annotated code block below. Each line has exactly one job. Nothing is redundant.</p>
+    <p><b>Why batches instead of the full dataset at once?</b> Modern datasets are too large to fit in GPU memory. A batch of 32&ndash;256 samples gives the optimizer a good-enough gradient estimate and trains far faster than waiting for the full dataset each step.</p>
+    <p><b>Common novice mistakes:</b></p>
+    <ul>
+      <li><b>Forgetting <code>optimizer.zero_grad()</code>.</b> PyTorch accumulates gradients by default — it adds each new backward pass on top of the old one. Skip the clear and your gradients grow without bound. Training will silently produce garbage.</li>
+      <li>Calling <code>loss.backward()</code> before <code>optimizer.zero_grad()</code> — the order must be: zero, forward, loss, backward, step.</li>
+      <li>Not switching to <code>model.eval()</code> during validation — dropout stays on and batch-norm uses wrong statistics, giving noisy val numbers.</li>
+    </ul>`, code:`# Canonical PyTorch training loop — annotate every line
+for epoch in range(num_epochs):              # one epoch = one full pass over the dataset
+    for x, y in loader:                      # loader yields one mini-batch at a time
+        optimizer.zero_grad()                # CLEAR old gradients — PyTorch accumulates; skip = bug
+        pred = model(x)                      # forward pass: input flows through all layers
+        loss = loss_fn(pred, y)              # scalar score of how wrong the model is right now
+        loss.backward()                      # backprop: compute dLoss/dWeight for every weight
+        optimizer.step()                     # update: w = w - lr * grad (with optimizer adjustments)
+    print(f"epoch {epoch}  loss {loss.item():.4f}")  # .item() pulls tensor scalar → Python float`},
+    {h:"Loss won't go down — the debugging checklist", body:`<p><b>Mental model:</b> training is an experiment. When the experiment fails, work through the checklist from most-likely to least-likely cause. Do not randomly tune hyperparameters hoping to get lucky.</p>
+    <p><b>The golden diagnostic test first:</b> before touching a single hyperparameter, try to make the model memorize 10 training samples perfectly. Set batch size to 10, run for many epochs, watch training loss. If it does not reach near-zero:</p>
+    <ul>
+      <li>There is a bug in your code — wrong loss function, labels and inputs shuffled out of sync, model output shape mismatch. Fix the code first.</li>
+    </ul>
+    <p>If it memorizes 10 samples easily, your code is correct and you have a hyperparameter or data problem:</p>
+    <table>
+      <tr><th>Symptom</th><th>Most likely cause</th><th>Try</th></tr>
+      <tr><td>Loss explodes or goes NaN</td><td>Learning rate too high</td><td>Divide LR by 10</td></tr>
+      <tr><td>Loss flat from the very first step</td><td>LR too low, or data/label mismatch</td><td>Multiply LR by 10; check that inputs and labels are aligned (shuffle bug)</td></tr>
+      <tr><td>Loss falls, then climbs back up</td><td>Overfitting</td><td>Get more data, add regularization (dropout, weight decay), or reduce model size</td></tr>
+      <tr><td>Loss jumps wildly between steps</td><td>Batch too small or bad samples in data</td><td>Increase batch size; inspect individual samples for corrupted labels</td></tr>
+    </table>
+    <p><b>Common novice mistakes:</b></p>
+    <ul>
+      <li>Tuning the learning rate for 30 minutes before running the 10-sample memorization test — you may be tuning around a code bug.</li>
+      <li>Declaring "the model can't learn this task" after two training runs — the checklist above resolves 90% of failures.</li>
+    </ul>`},
     {h:"Common mistakes + interview prep", body:`<div class="mistake"><b>Mistake #1:</b> forgetting <code>opt.zero_grad()</code> at start of each step → grads accumulate from previous step → wrong updates → loss explodes or doesn't converge.</div>
     <div class="mistake"><b>Mistake #2:</b> not calling <code>model.eval()</code> during validation → dropout still active + BN uses batch stats → noisy/wrong val numbers. Always pair with <code>with torch.no_grad():</code> for speed.</div>
     <div class="mistake"><b>Mistake #3:</b> using <code>GradScaler</code> with bf16. Scaler is fp16-only. With bf16 just use <code>autocast(dtype=torch.bfloat16)</code> and skip the scaler.</div>
