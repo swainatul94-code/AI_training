@@ -1189,7 +1189,7 @@ function tokLabBpeLearned(text){
   for(let m = 0; m < targetMerges; m++){
     const counts = new Map();
     for(let i = 0; i < toks.length-1; i++){
-      const k = toks[i] + " " + toks[i+1];
+      const k = toks[i] + "\u0000" + toks[i+1];
       counts.set(k, (counts.get(k)||0) + 1);
     }
     if(!counts.size) break;
@@ -1198,7 +1198,7 @@ function tokLabBpeLearned(text){
       if(n > bestN){ best = k; bestN = n; }
     }
     if(bestN < 2) break;
-    const [a, b] = best.split(" ");
+    const [a, b] = best.split("\u0000");
     const merged = a + b;
     merges.push([a, b, merged]);
     const out = []; let i = 0;
@@ -1732,7 +1732,7 @@ function reviewSubmit(quality){
 
 /* --------------------- PORTFOLIO VIEW --------------------- */
 function renderPortfolio(){
-  const phases = COURSE.filter(p => p.id >= 0).slice(0, 14);
+  const phases = COURSE.filter(p => p.id >= 0);
   document.getElementById("main").innerHTML = `
     <h2>📦 Portfolio Tracker</h2>
     <p>Public proof of work = job leverage. Track GitHub repos, Hugging Face Hub models, blog posts per phase.</p>

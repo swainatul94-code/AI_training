@@ -6,13 +6,13 @@ The most fun way to learn AI — from "what's a neuron?" to building and shippin
 
 | File | What it is |
 |------|------------|
-| `index.html` | **Main site.** Landing + 14-phase roadmap + 8 interactive demos + Deep Concepts encyclopedia + flashcards + activity heatmap. Markup only. |
+| `index.html` | **Main site.** Landing + 16-phase roadmap + 8 interactive demos + Deep Concepts encyclopedia + flashcards + activity heatmap. Markup only. |
 | `styles.css` | All styling (extracted from `index.html` for HTTP caching). |
 | `app.js` | All behavior (extracted so a strict Content-Security-Policy can use `script-src 'self'`). |
 | `sw.js` | Service worker — cache-first offline support. |
 | `manifest.webmanifest` | PWA manifest (installable to home screen). |
 | `ai_master_course.html` | Original gamified interactive course (XP, levels, quizzes, 14 mini-games). Linked from the new site's nav, hero, and footer. |
-| `AI_ZERO_TO_HERO.md` | 14-phase roadmap as plain markdown (~30 weeks, 10–20 hrs/wk). |
+| `AI_ZERO_TO_HERO.md` | 16-phase roadmap as plain markdown (~30 weeks, 10–20 hrs/wk). |
 | `AI_REFERENCE.md` | Glossary + 100 interview questions + decision trees + cheat sheets. |
 
 ## Quick start
