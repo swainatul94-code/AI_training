@@ -158,6 +158,67 @@ for step in range(total_steps):
       <li>HellaSwag, MMLU, GSM8K</li>
       <li><a href="https://github.com/EleutherAI/lm-evaluation-harness" target="_blank">lm-eval-harness</a></li>
     </ul>`},
+    {h:"What pretraining actually optimizes", body:`<p>Pretraining has exactly one objective: given the tokens so far, predict the next token. The math behind that objective is called <b>cross-entropy loss</b>. You do not need to understand the full formula right now — what matters is what it measures: how surprised was the model by the actual next token? Low surprise = low loss = the model predicted well.</p>
+<p>There is a more intuitive version of loss called <b>perplexity</b>. Perplexity answers the question: "How confused is the model, on average? It is as if the model had to pick uniformly among N equally likely tokens." You compute it as: perplexity = e^loss, where e &asymp; 2.718.</p>
+<p><b>Worked example:</b></p>
+<ul>
+  <li>Loss = 10.8 &rarr; perplexity = e^10.8 &asymp; 49,000. The model is as confused as if choosing randomly among 49,000 equally likely tokens — about the size of a typical vocabulary. This is what an untrained model looks like on its first batch.</li>
+  <li>Loss = 3.2 &rarr; perplexity = e^3.2 &asymp; 24.5. The model has narrowed down its prediction to about 25 plausible candidates. This is roughly where a well-trained small language model lands on general English text.</li>
+</ul>
+<p>Every ability the model develops — grammar, facts, reasoning, code — emerges from this single objective applied to billions of tokens. There are no separate "grammar lessons" or "fact-learning steps." The model discovers everything because predicting next tokens well requires understanding everything.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking a lower perplexity on training data always means a better model. It might mean memorization. Always measure perplexity on held-out validation data the model was never trained on.</li>
+  <li>Confusing perplexity with accuracy. Accuracy asks "did you get it exactly right?" Perplexity asks "how spread out was your probability mass?" A model that puts 60% probability on the right token has low perplexity even if it is not 100% sure.</li>
+</ul>`},
+    {h:"From raw text to a training batch", body:`<p>Raw text cannot be fed directly into a neural network — numbers can. Converting text to numbers and arranging them into training batches is its own pipeline with several steps.</p>
+<p><b>The full pipeline:</b></p>
+<ol>
+  <li><b>Tokenize:</b> a tokenizer (commonly BPE, Byte-Pair Encoding) splits text into pieces called tokens and maps each piece to an integer ID. "Hello world" might become [15496, 995]. The vocabulary is typically 32,000 to 100,000 tokens.</li>
+  <li><b>Concatenate into a stream:</b> all documents are tokenized and joined end-to-end into one enormous sequence — potentially hundreds of billions of integers.</li>
+  <li><b>Chop into windows:</b> the stream is cut into fixed-length chunks (e.g., 1024 tokens each). Each chunk becomes one training example.</li>
+  <li><b>Stack into batches:</b> multiple windows are grouped into a batch of shape (batch_size, seq_length).</li>
+</ol>
+<p><b>Worked example — a 6-token toy:</b></p>
+<p>Suppose our entire corpus, after tokenizing, is the stream: [The, cat, sat, on, the, mat]</p>
+<p>With a window size of 5, we get one training example:</p>
+<ul>
+  <li><b>Input (x):</b> [The, cat, sat, on, the]</li>
+  <li><b>Label (y):</b> [cat, sat, on, the, mat]</li>
+</ul>
+<p>Notice that labels = input shifted by one position. At position 0, the model sees "The" and must predict "cat." At position 1, it sees "The, cat" and must predict "sat." At every position simultaneously, the model learns to predict the next token. One window, five training signals.</p>
+<p><b>Mental model:</b> the text itself is the label. No human ever writes a separate "correct answer" file — the answer to "what comes after token X?" is whatever actually came after token X in the original document.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking each training example needs a separate human-written answer. It does not — the dataset IS the label set, by construction.</li>
+  <li>Mixing up input and label indices. Input is tokens[0:n], label is tokens[1:n+1]. Getting this backwards is a silent bug that produces a model that cannot learn anything meaningful.</li>
+</ul>`},
+    {h:"Warmup and LR schedules — why the ramp", body:`<p><b>Learning rate (LR)</b> controls how large a step the optimizer takes when updating the model's weights. Too large and the model diverges (loss explodes). Too small and learning is painfully slow or stalls entirely.</p>
+<p>For pretraining, the learning rate is not fixed — it follows a careful schedule with two phases:</p>
+<p><b>Phase 1 — Warmup (ramp up):</b> at the very start of training, the weights are random and the gradients (the direction to step in) are unreliable. If you use a large learning rate immediately, the first few batches push the weights far in random, misleading directions. Warmup solves this by starting the LR near zero and gradually increasing it to the target (peak) LR over the first few thousand steps. By then the gradients have become more meaningful and large steps are safe.</p>
+<p><b>Phase 2 — Cosine decay (ramp down):</b> once the model is well-trained, large steps would undo the fine detail it has already learned — like re-stirring a painting that is almost dry. Cosine decay smoothly reduces the LR from its peak all the way down toward zero over the rest of training. The result is a smooth, slow polishing phase.</p>
+<p><b>Mental model:</b> imagine learning to throw darts. In week 1 (warmup) you make big exploratory throws to learn the general direction. In week 12 (cosine decay) you make tiny precise adjustments to your grip. Making giant throws in week 12 would erase what you already learned.</p>
+<p>The full LR curve shape: starts at 0, ramps up to peak over a few thousand steps, then follows a cosine curve (a smooth S-shaped descent) back toward 0 by the end of training.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Copying a fine-tuning learning rate (e.g., 2e-5) for pretraining. Pretraining uses much larger LRs (e.g., 3e-4). The scales differ by an order of magnitude and using the wrong one wastes enormous amounts of compute.</li>
+  <li>Skipping warmup entirely. On large models, no-warmup training can diverge catastrophically in the first 100 steps and never recover.</li>
+</ul>`},
+    {h:"Reading a loss curve like a doctor", body:`<p>A loss curve is a graph with training steps on the x-axis and loss value on the y-axis. Reading it correctly is one of the most practical skills in machine learning. Here is a symptom table:</p>
+<p><b>Worked example — symptoms and diagnoses:</b></p>
+<ul>
+  <li><b>Sharp upward spikes in loss:</b> learning rate is too high, or a corrupted batch slipped through the data pipeline. Fix: lower the LR, or add gradient clipping and audit your data.</li>
+  <li><b>Loss completely flat from step 0:</b> learning rate is too low (the model never takes a meaningful step), the data pipeline is broken (feeding random or repeated tokens), or the input and label arrays are misaligned. Fix: print a decoded batch and verify it looks right; try LRs spanning 3 orders of magnitude.</li>
+  <li><b>Training loss falls smoothly but validation loss rises:</b> overfitting — the model is memorizing the training corpus instead of learning generalizable patterns. This is most common when the dataset is tiny. Fix: use more data, add regularization (dropout, weight decay), or stop training earlier.</li>
+  <li><b>Loss suddenly becomes NaN (not a number):</b> numerical blow-up — some value divided by zero or overflowed. Fix: add gradient clipping (clip_grad_norm to 1.0), lower the LR, switch from fp16 to bf16, and search your code for operations that could produce infinity.</li>
+  <li><b>Smooth power-law-ish descent that keeps improving:</b> healthy training. Expected behavior. Keep going.</li>
+</ul>
+<p><b>Mental model:</b> a loss curve is an ECG for your model. A flat line is as bad as a chaotic one. A smooth downward slope with both training and validation loss tracking closely is a healthy heartbeat.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Only logging and watching training loss. Training loss alone is almost useless for diagnosing problems — a model can memorize its training set and score perfectly on training loss while being completely broken on new text. Always log validation loss on a separate held-out set that the model never trained on.</li>
+  <li>Stopping training the moment train loss drops, before checking val loss. The interesting behavior (overfitting, divergence) often shows up in val loss first.</li>
+</ul>`},
     {h:"Compute options + exact rental recipe (step-by-step)", body:`<table>
       <tr><th>Provider</th><th>Cost</th><th>Use for</th></tr>
       <tr><td>Kaggle (free P100/T4 30hr/wk)</td><td>$0</td><td>Sanity runs, tiny &lt;30M models</td></tr>

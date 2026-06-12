@@ -166,6 +166,110 @@ proj:           (B, T, C)         # final mixing</code></pre>`, code:`class MHA(
       <li><a href="https://github.com/karpathy/nanoGPT" target="_blank">nanoGPT</a></li>
       <li>Sebastian Raschka <i>Build a Large Language Model (From Scratch)</i></li>
     </ul>`},
+    {h:"Attention with real numbers (a tiny worked example)", body:`<p>This is the single most important example in the course. If you follow every step here, you will never be confused about attention again.</p>
+<p><b>Setup:</b> we have 3 tokens. Each token has a 2-dimensional vector (d_k = 2). Normally d_k = 64 or more, but the arithmetic is identical — smaller numbers just let us do it by hand.</p>
+<p>We are given these query (Q), key (K), and value (V) vectors for each token:</p>
+<ul>
+  <li>q1 = (1, 0), k1 = (1, 0), v1 = (1, 0)</li>
+  <li>q2 = (0, 1), k2 = (0, 1), v2 = (0, 2)</li>
+  <li>q3 = (1, 1), k3 = (1, 1), v3 = (3, 0)</li>
+</ul>
+<p><b>Goal:</b> compute token 3's new representation after attention.</p>
+<p><b>Step 1 — raw similarity scores.</b> A "dot product" is the sum of element-wise multiplications. We measure how much token 3's query matches each key:</p>
+<ul>
+  <li>q3 &middot; k1 = 1&times;1 + 1&times;0 = 1</li>
+  <li>q3 &middot; k2 = 1&times;0 + 1&times;1 = 1</li>
+  <li>q3 &middot; k3 = 1&times;1 + 1&times;1 = 2</li>
+</ul>
+<p><b>Step 2 — scale by &radic;d_k.</b> We divide each score by &radic;2 &asymp; 1.414 to stop the numbers from growing too large (more on why in the next lesson):</p>
+<ul>
+  <li>1 / 1.414 &asymp; 0.71</li>
+  <li>1 / 1.414 &asymp; 0.71</li>
+  <li>2 / 1.414 &asymp; 1.41</li>
+</ul>
+<p><b>Step 3 — softmax.</b> Softmax converts raw scores into weights that sum to 1, using the formula e^score / sum-of-all-e^scores. Here e &asymp; 2.718 is Euler's number:</p>
+<ul>
+  <li>e^0.71 &asymp; 2.03</li>
+  <li>e^0.71 &asymp; 2.03</li>
+  <li>e^1.41 &asymp; 4.10</li>
+  <li>Sum = 2.03 + 2.03 + 4.10 = 8.16</li>
+  <li>Weights: 2.03/8.16 &asymp; 0.25, &nbsp; 2.03/8.16 &asymp; 0.25, &nbsp; 4.10/8.16 &asymp; 0.50</li>
+</ul>
+<p><b>Step 4 — weighted sum of values.</b> These weights say "blend 25% of token 1's value, 25% of token 2's value, 50% of token 3's value":</p>
+<ul>
+  <li>0.25 &times; v1 = 0.25 &times; (1, 0) = (0.25, 0)</li>
+  <li>0.25 &times; v2 = 0.25 &times; (0, 2) = (0, 0.5)</li>
+  <li>0.50 &times; v3 = 0.50 &times; (3, 0) = (1.5, 0)</li>
+  <li>Output = (0.25 + 0 + 1.5, &nbsp; 0 + 0.5 + 0) = <b>(1.75, 0.5)</b></li>
+</ul>
+<p><b>Mental model:</b> that weighted blend IS attention. Token 3 got a higher score against itself (2 vs 1 each for the others), so it contributes half the output. Everything else in the attention formula — the weight matrices, multi-head splitting, masking — is bookkeeping around this one central idea: take a weighted average of value vectors, where the weights come from similarity scores.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking attention "selects" one token. It does not — it always blends ALL tokens, just with different weights.</li>
+  <li>Forgetting the scaling step. Without &radic;d_k the scores grow large, softmax becomes nearly all-or-nothing, and learning breaks.</li>
+  <li>Confusing the output (1.75, 0.5) with a token ID or a word. It is a continuous vector — a new representation, not a word.</li>
+</ul>`},
+    {h:"Q, K, V: the library analogy", body:`<p>Each token produces three separate vectors: Q (query), K (key), and V (value). They are all computed from the same original embedding, but through three different learned weight matrices. Why three? Because a token plays three different roles simultaneously, and one vector cannot optimally serve all three.</p>
+<p><b>Mental model — the library:</b></p>
+<ul>
+  <li><b>Q (query)</b> is the question you walk in with: "I need books about the French Revolution."</li>
+  <li><b>K (key)</b> is the label on each book's spine: "French History", "Napoleon Biography", "Cooking for Beginners".</li>
+  <li><b>V (value)</b> is what's actually inside the book — the content you get if you pull it off the shelf.</li>
+</ul>
+<p>The dot product of your query with every key tells you how relevant each book is. Softmax turns those relevance scores into borrowing weights. You walk out with a weighted mixture of all the books' contents.</p>
+<p><b>Worked example:</b></p>
+<p>Suppose you are the token "Paris" and the context is "The capital of France is Paris." Your Q vector encodes something like "what am I related to?" Your K vectors for each other token encode what that token advertises. The word "France" has a K vector that scores highly against your Q (strong dot product), so it gets a large weight. The word "The" scores low. Your output V becomes a blend that is heavily influenced by "France" — giving "Paris" a representation that reflects its geographic relationship.</p>
+<p><b>Why separate projections matter:</b> imagine you are the word "bank." As a query (Q) you might be looking for financial context. As a key (K) you need to broadcast what you offer to others' queries. As a value (V) you need to deliver useful content when someone attends to you. These three jobs conflict — a single vector would have to compromise. Separate learned projections let the model handle each role independently.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking Q, K, V come from three different tokens. They all come from the same token, projected three ways.</li>
+  <li>Thinking the weight matrices W_Q, W_K, W_V are fixed. They are learned during training — they are the model's way of deciding what "looking for" and "advertising" should mean.</li>
+</ul>`},
+    {h:"Why positional encoding exists", body:`<p>Here is a puzzle: the attention formula q &middot; k is just a dot product. It measures similarity between two vectors. Dot products have no concept of ORDER — they do not know whether token A came before or after token B.</p>
+<p>This means that if you shuffle "dog bites man" to "man bites dog," the raw attention scores are identical. The set of tokens is the same; only the order changed. But order is everything — "dog bites man" and "man bites dog" mean opposite things.</p>
+<p><b>The fix: positional encoding.</b> Before feeding tokens into attention, add a position-dependent vector to each token's embedding. Now the vector for "man" in position 1 is mathematically different from "man" in position 3. The dot products change. The model can distinguish order.</p>
+<p>There are several ways to build these position vectors:</p>
+<ul>
+  <li><b>Sinusoidal (original paper):</b> fixed mathematical patterns using sine and cosine waves at different frequencies. No parameters to train. Works surprisingly well.</li>
+  <li><b>Learned (GPT-2):</b> treat positions like a vocabulary and learn an embedding for each position. Simple and effective.</li>
+  <li><b>RoPE (modern LLMs like Llama):</b> instead of adding to embeddings, rotate the Q and K vectors by an angle that depends on position. Better at generalizing to longer sequences than seen in training.</li>
+</ul>
+<p><b>Mental model:</b> without positional encoding, the model reads every sentence as an unordered bag of words — like a ransom note where you cut out words and scatter them on a table. Positional encoding glues the words back into their original left-to-right order before the model reads them.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking the model has built-in left-to-right reading order like a human. It does not — attention is inherently order-blind, and positional encoding is the entire solution to this problem.</li>
+  <li>Thinking you only need positional encoding once. In most architectures it is added once at the very start, before the first attention layer, and then the position information propagates through the residual connections.</li>
+</ul>`},
+    {h:"Residuals and LayerNorm: why deep nets train at all", body:`<p>A modern transformer has 32, 96, or even 128 stacked layers. Each layer transforms the data. Without two engineering tricks — residual connections and LayerNorm — deep transformers simply do not train. The loss stays stuck and the network is useless.</p>
+<p><b>Residual connections (the "+ x" trick):</b></p>
+<p>Instead of output = layer(x), a residual block computes output = layer(x) + x. That "+ x" keeps an unmodified copy of the input flowing through. Why does this matter? During training, errors (gradients) must travel backwards through every layer from the end to the start. In a 100-layer network without residuals, each layer multiplies the gradient by some small number — after 100 multiplications the gradient has essentially vanished (the "vanishing gradient" problem), and early layers learn nothing. The residual shortcut gives gradients a direct highway that skips every layer, so even the very first layer receives a meaningful learning signal.</p>
+<p><b>LayerNorm (the "keep numbers healthy" trick):</b></p>
+<p>Each token's vector is a collection of numbers — activations. As these numbers pass through layer after layer, they can drift: the mean and scale change. After 50 layers, a number that started near 0.1 might balloon to 10,000, or shrink to 0.000001. Both extremes break learning. LayerNorm re-centers and re-scales each token's vector after every sublayer, keeping the numbers in a stable range.</p>
+<p><b>Mental model:</b> residual connections are like sending the original document along with every edit — you can always compare the final edited draft against the original. LayerNorm is like re-tuning an instrument between songs — each song (layer) starts from a standardized pitch, not from wherever the last song left off.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking residuals are optional or a minor optimization. They are not — without them, training a transformer deeper than ~5 layers is essentially impossible.</li>
+  <li>Confusing LayerNorm with BatchNorm. BatchNorm normalizes across examples in a batch; LayerNorm normalizes across the feature dimension of a single example. Transformers use LayerNorm because sequence lengths vary and batch-level statistics are less stable for language.</li>
+</ul>`},
+    {h:"One full forward pass, narrated", body:`<p>Let us trace one piece of text through a tiny decoder-only transformer from input to output probabilities. We use concrete numbers throughout. The model has: batch size B = 1, sequence length T = 4, model dimension d_model = 8, vocabulary size = 100, and N stacked layers.</p>
+<p><b>Worked example — tensor shapes at every step:</b></p>
+<ul>
+  <li><b>Token IDs</b> (1, 4): the raw integer IDs of the 4 input tokens, e.g. [12, 47, 3, 81]. Shape is (batch=1, seq=4).</li>
+  <li><b>Token embeddings</b> (1, 4, 8): each integer ID is looked up in a learned table, producing an 8-dimensional vector. Shape is (1, 4, 8).</li>
+  <li><b>+ Positional encoding</b> (1, 4, 8): a position-dependent vector is added to each token's embedding. Shape stays (1, 4, 8).</li>
+  <li><b>Attention sublayer</b> (1, 4, 8): Q, K, V projections, scaled dot-product, softmax, weighted sum, output projection. Shape stays (1, 4, 8).</li>
+  <li><b>MLP sublayer</b> (1, 4, 8): a two-layer feedforward network (expand to 4&times;8=32, apply activation, contract back to 8). Shape stays (1, 4, 8).</li>
+  <li><b>Repeat &times; N layers</b>: the (1, 4, 8) tensor passes through N identical blocks. Shape stays (1, 4, 8) throughout.</li>
+  <li><b>Final LayerNorm</b> (1, 4, 8): normalize after the last layer. Shape stays (1, 4, 8).</li>
+  <li><b>Projection to vocabulary</b> (1, 4, 100): a learned linear layer maps from d_model=8 to vocab=100. Each of the 4 positions now has a score for every possible next token. Shape is (1, 4, 100).</li>
+  <li><b>Softmax</b> (1, 4, 100): converts scores to probabilities. Every row sums to 1. Shape is (1, 4, 100).</li>
+</ul>
+<p><b>How generation works from here:</b> during generation, we only care about the LAST position's row of the (1, 4, 100) probability table — that is the model's prediction for what comes after position 4. We sample a token ID from those 100 probabilities, append it to our sequence to get length 5, and run the forward pass again. Repeat until done.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking the model "outputs words." It outputs a probability distribution over the entire vocabulary at every step. Turning that into a word requires a sampling decision (greedy, top-k, nucleus) that happens outside the model.</li>
+  <li>Thinking position 0's output is the model's answer. For a decoder, the useful output is always the last position's probabilities — earlier positions are used only during training, where every position predicts its own next token simultaneously.</li>
+</ul>`},
   ],
   quiz:[
     {type:"mcq", q:"Why /√d_k?", options:["Speed","Without scale, dot products grow with d_k → softmax saturates → grad vanishes","LayerNorm req","Precision"], answer:1, explain:"Var(q·k) grows with d_k. Large values → near one-hot softmax → tiny grad on losers. Scale stabilizes."},

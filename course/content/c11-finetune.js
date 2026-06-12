@@ -62,6 +62,75 @@ COURSE_PHASES.push(Object.assign({ order: 11 },
     </ol>`},
     {h:"DPO", body:"<p>Skips reward model. Direct loss from preference pairs.</p><span class='formula'>L_DPO = -log σ(β·[log π(yw|x)/π_ref(yw|x) − log π(yl|x)/π_ref(yl|x)])</span><ul><li>π_ref = frozen SFT (KL anchor)</li><li>Simpler than PPO. Modern default. Use HF TRL DPOTrainer.</li></ul>"},
     {h:"Constitutional AI (Anthropic)", body:`<p>Read <a href="https://arxiv.org/abs/2212.08073" target="_blank">CAI paper</a>. Replaces costly human feedback with AI feedback guided by written principles.</p>`},
+    {h:"Prompt vs fine-tune vs pretrain: the decision guide", body:`<p>Before spending any money or time on fine-tuning, ask: have you actually tried prompting? Most beginners skip straight to fine-tuning and discover weeks later that a carefully written prompt would have solved the problem in five minutes. Here is a structured decision table:</p>
+<table>
+  <tr><th>Approach</th><th>Data needed</th><th>Cost</th><th>Time</th><th>When to use</th></tr>
+  <tr><td><b>Prompting</b></td><td>0 examples</td><td>Pennies (API calls)</td><td>Minutes</td><td>Always try first</td></tr>
+  <tr><td><b>Fine-tuning</b></td><td>Hundreds to thousands of high-quality examples</td><td>Real money (GPU hours)</td><td>Hours to days</td><td>When prompting provably plateaus on a specific, repeated task</td></tr>
+  <tr><td><b>Pretraining</b></td><td>Trillions of tokens</td><td>Millions of dollars</td><td>Months</td><td>You personally: essentially never</td></tr>
+</table>
+<p><b>Mental model:</b> think of prompting as adjusting the steering wheel, fine-tuning as replacing the tires, and pretraining as building the car from scratch. Most destinations only require steering.</p>
+<p><b>The decision rule in plain language:</b> run your best prompt on 50 real examples. Grade the outputs. If the model fails on more than ~30% of cases and the failures are consistent (always the same type of error, not random), that is evidence fine-tuning might help. If the failures are scattered or the model just needs more context — that is a prompt engineering problem.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Jumping to fine-tuning because the first prompt attempt did not work. One failed prompt is not evidence that prompting is insufficient — it is evidence that the prompt needs improvement.</li>
+  <li>Fine-tuning to fix factual errors. Fine-tuning teaches style and format, not facts. If the model gives wrong facts, the fix is RAG (feeding it the right documents), not fine-tuning.</li>
+</ul>`},
+    {h:"LoRA with actual parameter math", body:`<p>Full fine-tuning updates every weight in the model. For a large model, this is impractical: a 7 billion parameter model requires storing the weights, gradients, and optimizer state, which together can exceed 100 GB. LoRA (Low-Rank Adaptation) is the standard solution.</p>
+<p><b>The core idea:</b> instead of updating the full weight matrix W, freeze W and add a tiny side-path made of two small matrices A and B. The combined update is W' = W + B&times;A.</p>
+<p><b>Worked example — exact parameter counts for one weight matrix:</b></p>
+<p>Consider a single weight matrix of size 4096 &times; 4096 (common in large transformers):</p>
+<ul>
+  <li>Full fine-tuning: 4096 &times; 4096 = <b>16,777,216 parameters</b> to update for this one matrix.</li>
+  <li>LoRA with rank r = 8: train matrix A of shape 4096 &times; 8 and matrix B of shape 8 &times; 4096.</li>
+  <li>A has 4096 &times; 8 = 32,768 parameters.</li>
+  <li>B has 8 &times; 4096 = 32,768 parameters.</li>
+  <li>Total: 32,768 + 32,768 = <b>65,536 parameters</b>.</li>
+  <li>Reduction: 65,536 / 16,777,216 = 0.0039 &asymp; <b>0.4% of the original</b>.</li>
+</ul>
+<p>A typical fine-tune applies LoRA to several matrices per layer. Even so, the total trainable parameters stay under 1% of the full model — small enough to fit in a fraction of the original GPU memory.</p>
+<p><b>Mental model:</b> LoRA is like writing sticky notes on a textbook. The original pages (the pretrained weights W) are untouched and locked. Your notes (B&times;A) sit on top and change the effective answer the book gives. Remove the sticky notes and the original textbook is perfectly intact. This also means you can store one pretrained base model and many small sets of sticky notes for different tasks — rather than many full copies of the book.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking LoRA loses information compared to full fine-tuning. For most practical tasks, r = 8 to 64 captures all the adaptation needed, and research shows surprisingly small rank is sufficient.</li>
+  <li>Forgetting to merge the LoRA adapters before deployment. At inference time you usually multiply B&times;A and add it to W once, giving the same result with no extra compute overhead.</li>
+</ul>`},
+    {h:"The RLHF pipeline as a story", body:`<p>After Supervised Fine-Tuning (SFT), a model can follow instructions. But "following instructions" is not the same as "being helpful, honest, and harmless." RLHF (Reinforcement Learning from Human Feedback) is the next step. It is easiest to understand as a three-act story.</p>
+<p><b>Act 1 — SFT (Supervised Fine-Tuning): teaching by imitation.</b> Human writers create thousands of examples of good question-answer pairs. The model is trained to imitate these examples. It learns the format of a helpful response. Limitation: you can only train on as many examples as humans can write. That number is small compared to all possible questions.</p>
+<p><b>Act 2 — Reward Model: teaching a judge.</b> Humans are shown pairs of model-generated answers to the same question and asked which is better. A separate neural network — the reward model — is trained to predict these human preferences. Now you have an automated judge that can score any response without a human looking at it.</p>
+<p><b>Act 3 — RL (Reinforcement Learning): scaling taste.</b> The main model generates responses, the reward model scores them, and the training signal nudges the main model toward generating higher-scoring outputs. This process can run on millions of examples automatically — far more than humans could review. The model's behavior is shaped by the reward model's preferences, which were themselves shaped by human preferences.</p>
+<p><b>What each act fixes and breaks:</b></p>
+<ul>
+  <li>SFT teaches format and helpfulness, but is limited by how much human writing you can collect.</li>
+  <li>The reward model encodes human taste and allows it to scale to millions of cases automatically.</li>
+  <li>RL amplifies that taste — but also amplifies any flaws in it.</li>
+</ul>
+<p><b>The new failure mode RLHF introduces — reward hacking:</b> the model learns to maximize the reward model's score, not to actually be helpful. It may learn to sound confident even when wrong, to flatter the user, or to be verbose in ways the reward model incorrectly rewards. The model is optimizing for the judge's approval, not for truth.</p>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Thinking RLHF adds new knowledge to the model. It does not — knowledge came from pretraining. RLHF only shapes behavior: it changes how the model presents what it already knows.</li>
+  <li>Thinking a high reward score means a correct answer. Reward hacking means the model can achieve a high score while giving a confident but wrong response.</li>
+</ul>`},
+    {h:"Catastrophic forgetting and how to notice it", body:`<p><b>Catastrophic forgetting</b> is what happens when you fine-tune a model on a new task and it gets worse at everything it used to know. The same weights that encode "how to write code" and "how to translate Spanish" are being adjusted to perform better on your new task. If fine-tuning pushes those weights too far, the old skills get overwritten — "forgotten."</p>
+<p><b>Worked example:</b> you fine-tune a general-purpose model on 10,000 legal contracts. After fine-tuning, the model is excellent at drafting contract clauses. But when you ask it to help debug Python code, it now gives worse answers than before. When you ask it to translate a sentence from French, it struggles. The weights that encoded coding and translation knowledge got nudged toward legal language patterns.</p>
+<p><b>How to detect it before it is too late:</b></p>
+<ol>
+  <li>Before fine-tuning, build a small evaluation set of general tasks: coding questions, translation, commonsense reasoning, basic math. Record the model's score on each.</li>
+  <li>After fine-tuning, run the same evaluation set again.</li>
+  <li>The difference (before score minus after score) is your damage report. Any meaningful regression is catastrophic forgetting.</li>
+</ol>
+<p><b>How to mitigate it:</b></p>
+<ul>
+  <li><b>Use a lower learning rate</b> — smaller steps overwrite less of the original knowledge.</li>
+  <li><b>Train fewer epochs</b> — more passes over the fine-tune data = more forgetting.</li>
+  <li><b>Use LoRA</b> — the pretrained base weights are frozen and never changed, so forgetting is dramatically reduced. The sticky-note approach cannot overwrite the original textbook.</li>
+  <li><b>Mix in general-purpose data</b> — adding a small fraction (e.g., 5%) of diverse general text into the fine-tune set forces the model to keep its general skills active.</li>
+</ul>
+<p><b>Common novice mistakes:</b></p>
+<ul>
+  <li>Only evaluating on the new task after fine-tuning and declaring success. The new task will almost always improve — the question is what you traded away for that improvement.</li>
+  <li>Assuming LoRA makes forgetting impossible. LoRA reduces it significantly but does not eliminate it entirely — the attention outputs and MLP outputs still change.</li>
+</ul>`},
   ],
   quiz:[
     {type:"mcq", q:"LoRA r=16 on 4096×4096: trainable params?", options:["16M","131,072 = 2·4096·16","65,536","16"], answer:1, explain:"A(16,4096)+B(4096,16) = 131k. Vs full 16.8M. ~128× reduction."},
